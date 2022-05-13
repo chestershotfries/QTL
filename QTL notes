@@ -1,0 +1,449 @@
+---
+title: "teQTL Project"
+output:
+  html_document: 
+    df_print: kable
+    highlight: kate
+---
+```{r, echo=F, results='hide', warning=F, message=F}
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+setwd('~/Documents/QTL')
+```
+
+#### Start codon from gencode annotation
+```{bash, eval=F, echo=T}
+cat gencode.v19.annotation.gtf | grep "start_codon" > a.gtf  
+#Extract columns for chromosome, start codon position, gene id, and strand direction  
+awk -vOFS="\t" '{sub(/.*"/,"",$9);print $1, $4, $5, $10, $8, $7}' a.gtf > a.bed  
+#Clean up
+awk '{gsub(/"|;/,"",$4)}1' a.bed > gencode.v19.start.codons.bed  
+rm a.bed  
+rm a.gtf  
+```
+# teQTL FDR<0.1  
+\N
+### Extract Kozak sequence
+#### teQTL genes  
+```{bash, eval=F, echo=T}
+#Get teQTL gene ids  
+awk '$5 <= 0.10' cis.teQTL.mapping.permutation.pass.results.table > teqtl.fdr10.table  
+cat teqtl.fdr10.table | awk '{print $1}' > teqtl.fdr10.names  
+#Extract teQTL genes  
+grep -f teqtl.fdr10.names gencode.v19.start.codons.bed > teqtl.fdr10.selected.bed  
+#Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' teqtl.fdr10.selected.bed > teqtl.fdr10.selected.start.codons.bed  
+```
+
+
+
+
+```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.1'}
+teqtl10bed = read.table('teqtl.fdr10.selected.start.codons.bed')
+colnames(teqtl10bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+teqtl10bed$chromStart <- ifelse(teqtl10bed$strand == '+', teqtl10bed$chromStart - 9, teqtl10bed$chromStart - 6)
+teqtl10bed$chromEnd <- ifelse(teqtl10bed$strand == '+', teqtl10bed$chromEnd + 6, teqtl10bed$chromEnd + 9)
+#Remove chr from chromosome number column
+teqtl10bed$chrom <- gsub('^chr', '', teqtl10bed$chrom)
+write.table(teqtl10bed, 'teqtl.fdr10.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+#### Non-teQTL genes  
+```{bash, eval=F, echo=T}
+#Get non-teQTL gene ids  
+awk '$5 >0.10' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > non.teqtl.fdr10.table  
+cat non.teqtl.fdr10.table | awk '{print $1}' > non.teqtl.fdr10.names  
+#Extract non-teQTL gene ids  
+grep -f non.teqtl.fdr10.names gencode.v19.start.codons.bed > non.teqtl.fdr10.selected.bed  
+#Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' non.teqtl.fdr10.selected.bed > non.teqtl.fdr10.selected.start.codons.bed  
+```
+
+```{r 'Generate bed file of Kozak regions for non-teQTL genes FDR <0.1'}
+nonteqtl10bed = read.table('non.teqtl.fdr10.selected.start.codons.bed')
+colnames(nonteqtl10bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+nonteqtl10bed$chromStart <- ifelse(nonteqtl10bed$strand == '+', nonteqtl10bed$chromStart - 9, nonteqtl10bed$chromStart - 6)
+nonteqtl10bed$chromEnd <- ifelse(nonteqtl10bed$strand == '+', nonteqtl10bed$chromEnd + 6, nonteqtl10bed$chromEnd + 9)
+#Remove chr from chromosome number column
+nonteqtl10bed$chrom <- gsub('^chr', '', nonteqtl10bed$chrom)
+write.table(nonteqtl10bed, 'non.teqtl.fdr10.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+### Intersect SNPs with Kozak regions
+```{bash, eval=F, echo=T}
+#Clean up duplicates  
+cat teqtl.fdr10.kozak.bed | uniq > teqtl.fdr10.kozak.uniq.bed   
+cat non.teqtl.fdr10.kozak.bed | uniq > non.teqtl.fdr10.kozak.uniq.bed  
+
+#Intersect SNPs with Kozak regions  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr10.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr10.nohead.vcf.gz  
+
+#Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
+echo Genes > results.fdr10  
+wc -l < non.teqtl.fdr10.names >> results.fdr10  
+wc -l < teqtl.fdr10.names >> results.fdr10  
+echo SNPs >> results.fdr10  
+zcat results.nonteqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
+zcat results.teqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
+
+paste - - - < results.fdr10 > results.fdr10.tab  
+```
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.1'}
+results.fdr10 <- read.table('results.fdr10.tab')
+#Name rows and columns of contingency table
+rownames(results.fdr10) <- results.fdr10[,1]
+results.fdr10 <- results.fdr10[,-1]
+names(results.fdr10) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(results.fdr10),full_width = F)
+#Fisher's exact test
+fisher.test(results.fdr10)
+#Mosaic plot of contingency table
+mosaicplot(results.fdr10, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+pdf(file = '~/Documents/QTL/mosaic.fdr10.pdf', width = 5, height = 4)
+mosaicplot(results.fdr10, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+dev.off()
+```
+### Find the position of each SNP relative to the start codon
+```{bash, eval=F, echo=T}
+#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
+zcat results.teqtl.fdr10.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr10.table  
+zcat results.nonteqtl.fdr10.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr10.table  
+```
+```{r 'Find positions of SNPs and plot their histogram FDR <0.1'}
+#FDR <0.10
+teqtl10.results <- read.table('results.teqtl.fdr10.table')
+nonteqtl10.results <- read.table('results.nonteqtl.fdr10.table')
+#Name columns
+names(teqtl10.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+names(nonteqtl10.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+#Designate start codon position
+teqtl10.results$Start <- ifelse(teqtl10.results$Strand == '+', teqtl10.results$KStart + 9, teqtl10.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+teqtl10.results$Pos <- ifelse(teqtl10.results$Strand == '+', teqtl10.results$SNP - teqtl10.results$Start, teqtl10.results$Start - teqtl10.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+teqtl10.results$Pos <- ifelse(teqtl10.results$Strand == '+', ifelse(teqtl10.results$Pos > 0, teqtl10.results$Pos - 2, teqtl10.results$Pos), ifelse(teqtl10.results$Pos < 0, teqtl10.results$Pos + 2, teqtl10.results$Pos))
+#Designate start codon position
+nonteqtl10.results$Start <- ifelse(nonteqtl10.results$Strand == '+', nonteqtl10.results$KStart + 9, nonteqtl10.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+nonteqtl10.results$Pos <- ifelse(nonteqtl10.results$Strand == '+', nonteqtl10.results$SNP - nonteqtl10.results$Start, nonteqtl10.results$Start - nonteqtl10.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+nonteqtl10.results$Pos <- ifelse(nonteqtl10.results$Strand == '+', ifelse(nonteqtl10.results$Pos > 0, nonteqtl10.results$Pos - 2, nonteqtl10.results$Pos), ifelse(nonteqtl10.results$Pos < 0, nonteqtl10.results$Pos + 2, nonteqtl10.results$Pos))
+#Plot histograms
+ggplot(teqtl10.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,15.5), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.10')
+ggplot(nonteqtl10.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,50), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.10')
+pdf(file = '~/Documents/QTL/histogram.teqtl.fdr10.results.pdf', width = 10, height = 5)
+ggplot(teqtl10.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,15.5), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.10')
+dev.off()
+pdf(file = '~/Documents/QTL/histogram.nonteqtl.fdr10.results.pdf', width = 10, height = 5)
+ggplot(nonteqtl10.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,50), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.10')
+dev.off()
+```
+
+
+
+# teQTL FDR<0.05 
+\N
+### teQTL genes  
+
+
+```{bash, eval=F, echo=T}
+#Get teQTL gene ids 
+awk '$5 <= 0.05' cis.teQTL.mapping.permutation.pass.results.table > teqtl.fdr05.table  
+cat teqtl.fdr05.table | awk '{print $1}' > teqtl.fdr05.names  
+#Extract teQTL genes  
+grep -f teqtl.fdr05.names gencode.v19.start.codons.bed > teqtl.fdr05.selected.bed  
+#Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' teqtl.fdr05.selected.bed > teqtl.fdr05.selected.start.codons.bed  
+```
+
+```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.05'}
+teqtl05bed = read.table('teqtl.fdr05.selected.start.codons.bed')
+colnames(teqtl05bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+teqtl05bed$chromStart <- ifelse(teqtl05bed$strand == '+', teqtl05bed$chromStart - 9, teqtl05bed$chromStart - 6)
+teqtl05bed$chromEnd <- ifelse(teqtl05bed$strand == '+', teqtl05bed$chromEnd + 6, teqtl05bed$chromEnd + 9)
+#Remove chr from chromosome number column
+teqtl05bed$chrom <- gsub('^chr', '', teqtl05bed$chrom)
+write.table(teqtl05bed, 'teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Non-teQTL genes  
+
+```{bash, eval=F, echo=T}
+#Get non-teQTL gene ids  
+awk '$5 >0.05' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > non.teqtl.fdr05.table  
+cat non.teqtl.fdr05.table | awk '{print $1}' > non.teqtl.fdr05.names  
+#Extract non-teQTL gene ids  
+grep -f non.teqtl.fdr05.names gencode.v19.start.codons.bed > non.teqtl.fdr05.selected.bed  
+awk '{sub(/\..*/,"",$4)} 1' non.teqtl.fdr05.selected.bed > non.teqtl.fdr05.selected.start.codons.bed  
+```
+
+```{r 'Generate bed file of Kozak regions for non-teQTL genes FDR <0.05'}
+nonteqtl05bed = read.table('non.teqtl.fdr05.selected.start.codons.bed')
+colnames(nonteqtl05bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+nonteqtl05bed$chromStart <- ifelse(nonteqtl05bed$strand == '+', nonteqtl05bed$chromStart - 9, nonteqtl05bed$chromStart - 6)
+nonteqtl05bed$chromEnd <- ifelse(nonteqtl05bed$strand == '+', nonteqtl05bed$chromEnd + 6, nonteqtl05bed$chromEnd + 9)
+#Remove chr from chromosome number column
+nonteqtl05bed$chrom <- gsub('^chr', '', nonteqtl05bed$chrom)
+write.table(nonteqtl05bed, 'non.teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+```{bash, eval=F, echo=T}
+#Clean up duplicates  
+cat teqtl.fdr05.kozak.bed | uniq > teqtl.fdr05.kozak.uniq.bed  
+cat non.teqtl.fdr05.kozak.bed | uniq > non.teqtl.fdr05.kozak.uniq.bed  
+
+#Intersect SNPs with Kozak regions  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr05.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.nohead.vcf.gz  
+
+#Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
+echo Genes > results.fdr05  
+wc -l < non.teqtl.fdr05.names >> results.fdr05  
+wc -l < teqtl.fdr05.names >> results.fdr05  
+echo SNPs >> results.fdr05  
+zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+
+paste - - - < results.fdr05 > results.fdr05.tab  
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.05'}
+results.fdr05 <- read.table('results.fdr05.tab')
+#Name rows and columns of contingency table
+rownames(results.fdr05) <- results.fdr05[,1]
+results.fdr05 <- results.fdr05[,-1]
+names(results.fdr05) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(results.fdr05),full_width = F)
+#Fisher's exact test
+fisher.test(results.fdr05)
+#Mosaic plot of contingency table
+mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+pdf(file = '~/Documents/QTL/mosaic.fdr05.pdf', width = 5, height = 4)
+mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+dev.off()
+```
+
+```{bash, eval=F, echo=T}
+#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
+zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr05.table  
+zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr05.table 
+```
+
+```{r 'Find positions of SNPs and plot their histogram FDR <0.05'}
+#FDR <0.05
+teqtl05.results <- read.table('results.teqtl.fdr05.table')
+nonteqtl05.results <- read.table('results.nonteqtl.fdr05.table')
+#Name columns
+names(teqtl05.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+names(nonteqtl05.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+#Designate start codon position
+teqtl05.results$Start <- ifelse(teqtl05.results$Strand == '+', teqtl05.results$KStart + 9, teqtl05.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+teqtl05.results$Pos <- ifelse(teqtl05.results$Strand == '+', teqtl05.results$SNP - teqtl05.results$Start, teqtl05.results$Start - teqtl05.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+teqtl05.results$Pos <- ifelse(teqtl05.results$Strand == '+', ifelse(teqtl05.results$Pos > 0, teqtl05.results$Pos - 2, teqtl05.results$Pos), ifelse(teqtl05.results$Pos < 0, teqtl05.results$Pos + 2, teqtl05.results$Pos))
+#Designate start codon position
+nonteqtl05.results$Start <- ifelse(nonteqtl05.results$Strand == '+', nonteqtl05.results$KStart + 9, nonteqtl05.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+nonteqtl05.results$Pos <- ifelse(nonteqtl05.results$Strand == '+', nonteqtl05.results$SNP - nonteqtl05.results$Start, nonteqtl05.results$Start - nonteqtl05.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+nonteqtl05.results$Pos <- ifelse(nonteqtl05.results$Strand == '+', ifelse(nonteqtl05.results$Pos > 0, nonteqtl05.results$Pos - 2, nonteqtl05.results$Pos), ifelse(nonteqtl05.results$Pos < 0, nonteqtl05.results$Pos + 2, nonteqtl05.results$Pos))
+#Plot histograms
+ggplot(teqtl05.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,12), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.05')
+ggplot(nonteqtl05.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,50), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.05')
+pdf(file = '~/Documents/QTL/histogram.teqtl.fdr05.results.pdf', width = 10, height = 5)
+ggplot(teqtl05.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,12), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.05')
+dev.off()
+pdf(file = '~/Documents/QTL/histogram.nonteqtl.fdr05.results.pdf', width = 10, height = 5)
+ggplot(nonteqtl05.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,50), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.05')
+dev.off()
+```
+
+
+# teQTL FDR<0.01  
+\N
+
+### teQTL genes  
+
+```{bash, eval=F, echo=T}
+#Get teQTL gene ids 
+awk '$5 <= 0.01' cis.teQTL.mapping.permutation.pass.results.table > teqtl.fdr01.table  
+cat teqtl.fdr01.table | awk '{print $1}' > teqtl.fdr01.names  
+#Extract teQTL genes  
+grep -f teqtl.fdr01.names gencode.v19.start.codons.bed > teqtl.fdr01.selected.bed  
+#Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' teqtl.fdr01.selected.bed > teqtl.fdr01.selected.start.codons.bed  
+```
+```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.01'}
+teqtl01bed = read.table('teqtl.fdr01.selected.start.codons.bed')
+colnames(teqtl01bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+teqtl01bed$chromStart <- ifelse(teqtl01bed$strand == '+', teqtl01bed$chromStart - 9, teqtl01bed$chromStart - 6)
+teqtl01bed$chromEnd <- ifelse(teqtl01bed$strand == '+', teqtl01bed$chromEnd + 6, teqtl01bed$chromEnd + 9)
+#Remove chr from chromosome number column
+teqtl01bed$chrom <- gsub('^chr', '', teqtl01bed$chrom)
+write.table(teqtl01bed, 'teqtl.fdr01.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+### Non-teQTL genes  
+
+```{bash, eval=F, echo=T}
+#Get non-teQTL gene ids  
+awk '$5 >0.01' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > non.teqtl.fdr01.table  
+cat non.teqtl.fdr01.table | awk '{print $1}' > non.teqtl.fdr01.names  
+#Extract non-teQTL gene ids  
+grep -f non.teqtl.fdr01.names gencode.v19.start.codons.bed > non.teqtl.fdr01.selected.bed  
+awk '{sub(/\..*/,"",$4)} 1' non.teqtl.fdr01.selected.bed > non.teqtl.fdr01.selected.start.codons.bed  
+```
+```{r 'Generate bed file of Kozak regions for non-teQTL genes FDR <0.01'}
+nonteqtl01bed = read.table('non.teqtl.fdr01.selected.start.codons.bed')
+colnames(nonteqtl01bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+nonteqtl01bed$chromStart <- ifelse(nonteqtl01bed$strand == '+', nonteqtl01bed$chromStart - 9, nonteqtl01bed$chromStart - 6)
+nonteqtl01bed$chromEnd <- ifelse(nonteqtl01bed$strand == '+', nonteqtl01bed$chromEnd + 6, nonteqtl01bed$chromEnd + 9)
+#Remove chr from chromosome number column
+nonteqtl01bed$chrom <- gsub('^chr', '', nonteqtl01bed$chrom)
+write.table(nonteqtl01bed, 'non.teqtl.fdr01.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+```{bash, eval=F, echo=T}
+#Clean up duplicates  
+cat teqtl.fdr01.kozak.bed | uniq > teqtl.fdr01.kozak.uniq.bed  
+cat non.teqtl.fdr01.kozak.bed | uniq > non.teqtl.fdr01.kozak.uniq.bed  
+
+#Intersect SNPs with Kozak regions  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr01.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr01.nohead.vcf.gz  
+
+#Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
+echo Genes > results.fdr01  
+wc -l < non.teqtl.fdr01.names >> results.fdr01  
+wc -l < teqtl.fdr01.names >> results.fdr01  
+echo SNPs >> results.fdr01  
+zcat results.nonteqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
+zcat results.teqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
+
+paste - - - < results.fdr01 > results.fdr01.tab  
+```
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.01'}
+results.fdr01 <- read.table('results.fdr01.tab')
+#Name rows and columns of contingency table
+rownames(results.fdr01) <- results.fdr01[,1]
+results.fdr01 <- results.fdr01[,-1]
+names(results.fdr01) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(results.fdr01),full_width = F)
+#Fisher's exact test
+fisher.test(results.fdr01)
+#Mosaic plot of contingency table
+mosaicplot(results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+pdf(file = '~/Documents/QTL/mosaic.fdr01.pdf', width = 5, height = 4)
+mosaicplot(results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+dev.off()
+```
+
+```{bash}
+#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
+zcat results.teqtl.fdr01.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr01.table  
+zcat results.nonteqtl.fdr01.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr01.table  
+```
+
+```{r 'Find positions of SNPs and plot their histogram FDR <0.01'}
+#FDR <0.01
+teqtl01.results <- read.table('results.teqtl.fdr01.table')
+nonteqtl01.results <- read.table('results.nonteqtl.fdr01.table')
+#Name columns
+names(teqtl01.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+names(nonteqtl01.results) <- c('Chrom','SNP','KStart','KEnd','Gene','Strand')
+#Designate start codon position
+teqtl01.results$Start <- ifelse(teqtl01.results$Strand == '+', teqtl01.results$KStart + 9, teqtl01.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+teqtl01.results$Pos <- ifelse(teqtl01.results$Strand == '+', teqtl01.results$SNP - teqtl01.results$Start, teqtl01.results$Start - teqtl01.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+teqtl01.results$Pos <- ifelse(teqtl01.results$Strand == '+', ifelse(teqtl01.results$Pos > 0, teqtl01.results$Pos - 2, teqtl01.results$Pos), ifelse(teqtl01.results$Pos < 0, teqtl01.results$Pos + 2, teqtl01.results$Pos))
+#Designate start codon position
+nonteqtl01.results$Start <- ifelse(nonteqtl01.results$Strand == '+', nonteqtl01.results$KStart + 9, nonteqtl01.results$KStart + 6)
+#Find position of SNP relative to start codon; 3 bases of start codon itself is designated as 0
+nonteqtl01.results$Pos <- ifelse(nonteqtl01.results$Strand == '+', nonteqtl01.results$SNP - nonteqtl01.results$Start, nonteqtl01.results$Start - nonteqtl01.results$SNP)
+#To account for all 3 bases of start codon, subtract 2 if position is positive for positive strands and add 2 if negative for negative strands
+nonteqtl01.results$Pos <- ifelse(nonteqtl01.results$Strand == '+', ifelse(nonteqtl01.results$Pos > 0, nonteqtl01.results$Pos - 2, nonteqtl01.results$Pos), ifelse(nonteqtl01.results$Pos < 0, nonteqtl01.results$Pos + 2, nonteqtl01.results$Pos))
+#Plot histograms
+ggplot(teqtl01.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,7), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.01')
+ggplot(nonteqtl01.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,51), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.01')
+pdf(file = '~/Documents/QTL/histogram.teqtl.fdr01.results.pdf', width = 10, height = 5)
+ggplot(teqtl01.results, aes(x=Pos)) + geom_histogram(fill = 'pink', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,7), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('teQTL SNPs FDR<0.01')
+dev.off()
+pdf(file = '~/Documents/QTL/histogram.nonteqtl.fdr01.results.pdf', width = 10, height = 5)
+ggplot(nonteqtl01.results, aes(x=Pos)) + geom_histogram(fill = 'light blue', color = 'black', bins = 16, binwidth = 1) + scale_y_continuous(limits = c(0,51), expand = c(0,0)) + scale_x_continuous(breaks=-9:6) + theme_classic() + theme(plot.title = element_text(size = 24)) + ylab('Counts') + xlab('Position Relative to Start Codon') + ggtitle('Non-teQTL SNPs FDR<0.01')
+dev.off()
+```
+
+### Compare Kozak mutants and non-mutants
+```{bash, eval=F, echo=T}
+#Get all gene ids
+cat cis.teQTL.mapping.permutation.pass.results.table | awk '/ENSG/{ print $1}' > all.names  
+grep -f all.names gencode.v19.start.codons.bed > all.selected.bed  
+awk '{sub(/\..*/,"",$4)} 1' all.selected.bed > all.selected.start.codons.bed
+```
+```{r}
+allbed = read.table('all.selected.start.codons.bed')
+colnames(allbed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+#Designate Kozak region as -9 to +6 of start codon
+#9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+allbed$chromStart <- ifelse(allbed$strand == '+', allbed$chromStart - 9, allbed$chromStart -6)
+allbed$chromEnd <- ifelse(allbed$strand == '+', allbed$chromEnd + 6, allbed$chromEnd + 9)
+#Remove chr from chromosome number column
+allbed$chrom <- gsub('^chr', '', allbed$chrom)
+write.table(allbed, 'all.selected.kozak.bed', quote = FALSE, row.names = FALSE, col.names = FALSE, sep='\t')
+```
+```{bash, eval=F, echo=T}
+#Clean up duplicates
+cat all.selected.kozak.bed | uniq > all.selected.kozak.uniq.bed
+#Intersect SNPs with Kozak regions  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b all.selected.kozak.uniq.bed -wa -wb | bgzip > results.all.selected.nohead.vcf.gz
+#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
+zcat results.all.selected.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.all.selected.table  
+#Get gene ids for Kozak mutated genes  
+awk '{print $5}' results.all.selected.table > all.selected.mutated.kozak.names
+#Select genes with mutated Kozak
+grep -f all.selected.mutated.kozak.names cis.teQTL.mapping.permutation.pass.results.table > all.selected.mutated.kozak.table
+#Select genes with no mutated Kozak
+grep -vf all.selected.mutated.kozak.names cis.teQTL.mapping.permutation.pass.results.table | awk '/ENSG/' > all.selected.unmutated.kozak.table
+```
+
+```{r}
+#Load tables and format for ggplot
+allselected.mutated.kozak <- read.table('all.selected.mutated.kozak.table')
+allselected.unmutated.kozak <- read.table('all.selected.unmutated.kozak.table')
+tablenames <- read.table('cis.teQTL.mapping.permutation.pass.results.table',nrows=1)
+names(allselected.mutated.kozak) <- tablenames
+names(allselected.unmutated.kozak) <- tablenames
+allselected.mutated.kozak$mutated <- 'yes'
+allselected.unmutated.kozak$mutated <- 'no'
+#Combine tables; -log10 of beta and permute.pval
+allselected.merged <- rbind(allselected.mutated.kozak[, c(1, 5, 6, 7, 9)], allselected.unmutated.kozak[, c(1, 5, 6, 7, 9)])
+allselected.merged$permute.pval = -log10(allselected.merged$permute.pval)
+allselected.merged$beta = -log10(abs(allselected.merged$beta))
+#Violin plots and Wilcoxon Rank-Sum tests
+allselected.merged %>%
+  ggplot(aes(x = mutated, y = permute.pval, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(permute.pval ~ mutated, data = allselected.merged, exact = FALSE)
+allselected.merged %>%
+  ggplot(aes(x = mutated, y = beta, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(beta ~ mutated, data = allselected.merged, exact = FALSE)
+allselected.merged %>%
+  ggplot(aes(x = mutated, y = FDR, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(FDR ~ mutated, data = allselected.merged, exact = FALSE)
+```
+
+

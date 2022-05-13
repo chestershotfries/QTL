@@ -1,0 +1,53 @@
+### Compare Kozak mutants and non-mutants
+```{bash, eval=F, echo=T}
+#Get gene ids for Kozak mutated genes  
+awk '{print $5}' results.teqtl.fdr10.table > teqtl.fdr10.mutated.kozak.names  
+awk '{print $5}' results.nonteqtl.fdr10.table > non.teqtl.fdr10.mutated.kozak.names  
+#Select genes with mutated Kozak; caveat: some genes match to multiple SNPs in the Kozak region; total number of genes is less than matched SNPs  
+grep -f teqtl.fdr10.mutated.kozak.names teqtl.fdr10.table > teqtl.fdr10.mutated.kozak.table  
+grep -f non.teqtl.fdr10.mutated.kozak.names non.teqtl.fdr10.table > non.teqtl.fdr10.mutated.kozak.table  
+#If want to include duplicate matches
+awk 'NR==FNR{A[$1]=$0;next}{print A[$1]}' teqtl.fdr10.table teqtl.fdr10.mutated.kozak.names > teqtl.fdr10.mutated.kozak.table.dupes  
+awk 'NR==FNR{A[$1]=$0;next}{print A[$1]}' non.teqtl.fdr10.table non.teqtl.fdr10.mutated.kozak.names > non.teqtl.fdr10.mutated.kozak.table.dupes  
+#Select genes with no mutated Kozak
+grep -vf teqtl.fdr10.mutated.kozak.names teqtl.fdr10.table > teqtl.fdr10.unmutated.kozak.table  
+grep -vf non.teqtl.fdr10.mutated.kozak.names non.teqtl.fdr10.table > non.teqtl.fdr10.unmutated.kozak.table  
+```
+
+```{r}
+setwd('~/Documents/QTL/')
+#Load tables and format for ggplot
+teqtl10.mutated.kozak <- read.table('teqtl.fdr10.mutated.kozak.table')
+nonteqtl10.mutated.kozak <- read.table('non.teqtl.fdr10.mutated.kozak.table')
+teqtl10.unmutated.kozak <- read.table('teqtl.fdr10.unmutated.kozak.table')
+nonteqtl10.unmutated.kozak <- read.table('non.teqtl.fdr10.unmutated.kozak.table')
+tablenames <- read.table('cis.teQTL.mapping.permutation.pass.results.table',nrows=1)
+names(teqtl10.mutated.kozak) <- tablenames
+names(nonteqtl10.mutated.kozak) <- tablenames
+names(teqtl10.unmutated.kozak) <- tablenames
+names(nonteqtl10.unmutated.kozak) <- tablenames
+teqtl10.mutated.kozak$mutated <- 'yes'
+nonteqtl10.mutated.kozak$mutated <- 'yes'
+teqtl10.unmutated.kozak$mutated <- 'no'
+nonteqtl10.unmutated.kozak$mutated <- 'no'
+#Combine tables; log10 of beta and permute.pval
+teqtl10.merged <- rbind(teqtl10.mutated.kozak[, c(1, 6, 7, 9)], teqtl10.unmutated.kozak[, c(1, 6, 7, 9)])
+teqtl10.merged$permute.pval = log10(teqtl10.merged$permute.pval)
+teqtl10.merged$beta = log10(abs(teqtl10.merged$beta))
+nonteqtl10.merged <- rbind(nonteqtl10.mutated.kozak[, c(1, 6, 7 ,9)], nonteqtl10.unmutated.kozak[, c(1, 6 ,7 ,9)])
+nonteqtl10.merged$permute.pval = log10(nonteqtl10.merged$permute.pval)
+nonteqtl10.merged$beta = log10(abs(nonteqtl10.merged$beta))
+#Violin plots and Wilcoxon Rank-Sum tests
+teqtl10.merged %>%
+  ggplot(aes(x = mutated, y = permute.pval, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('teQTL genes FDR<0.10') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(permute.pval ~ mutated, data = teqtl10.merged, exact = FALSE)
+nonteqtl10.merged %>%
+  ggplot(aes(x = mutated, y = permute.pval, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('Non-teQTL genes FDR<0.10') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(permute.pval ~ mutated, data = nonteqtl10.merged, exact = FALSE)
+teqtl10.merged %>%
+  ggplot(aes(x = mutated, y = beta, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('teQTL genes FDR<0.10') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(beta ~ mutated, data = teqtl10.merged, exact = FALSE)
+nonteqtl10.merged %>%
+  ggplot(aes(x = mutated, y = beta, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('Non-teQTL genes FDR<0.10') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
+wilcox.test(beta ~ mutated, data = nonteqtl10.merged, exact = FALSE)
+```
