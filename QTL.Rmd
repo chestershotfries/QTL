@@ -195,7 +195,7 @@ nonteqtl05bed$chromEnd <- ifelse(nonteqtl05bed$strand == '+', nonteqtl05bed$chro
 nonteqtl05bed$chrom <- gsub('^chr', '', nonteqtl05bed$chrom)
 write.table(nonteqtl05bed, 'non.teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
-
+### Intersect SNPs with Kozak regions
 ```{bash, eval=F, echo=T}
 #Clean up duplicates  
 cat teqtl.fdr05.kozak.bed | uniq > teqtl.fdr05.kozak.uniq.bed  
@@ -232,7 +232,7 @@ pdf(file = '~/Documents/QTL/mosaic.fdr05.pdf', width = 5, height = 4)
 mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
 dev.off()
 ```
-
+### Find the position of each SNP relative to the start codon
 ```{bash, eval=F, echo=T}
 #Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
 zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr05.table  
@@ -316,6 +316,7 @@ nonteqtl01bed$chromEnd <- ifelse(nonteqtl01bed$strand == '+', nonteqtl01bed$chro
 nonteqtl01bed$chrom <- gsub('^chr', '', nonteqtl01bed$chrom)
 write.table(nonteqtl01bed, 'non.teqtl.fdr01.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
+### Intersect SNPs with Kozak regions
 ```{bash, eval=F, echo=T}
 #Clean up duplicates  
 cat teqtl.fdr01.kozak.bed | uniq > teqtl.fdr01.kozak.uniq.bed  
@@ -351,7 +352,7 @@ pdf(file = '~/Documents/QTL/mosaic.fdr01.pdf', width = 5, height = 4)
 mosaicplot(results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
 dev.off()
 ```
-
+### Find the position of each SNP relative to the start codon
 ```{bash}
 #Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
 zcat results.teqtl.fdr01.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr01.table  

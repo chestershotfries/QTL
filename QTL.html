@@ -876,6 +876,9 @@ SNPs
 <span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Remove chr from chromosome number column</span></span>
 <span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>nonteqtl05bed<span class="sc">$</span>chrom <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&#39;^chr&#39;</span>, <span class="st">&#39;&#39;</span>, nonteqtl05bed<span class="sc">$</span>chrom)</span>
 <span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(nonteqtl05bed, <span class="st">&#39;non.teqtl.fdr05.kozak.bed&#39;</span>, <span class="at">quote =</span> <span class="cn">FALSE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span></code></pre></div>
+</div>
+<div id="intersect-snps-with-kozak-regions-1" class="section level3">
+<h3>Intersect SNPs with Kozak regions</h3>
 <div class="sourceCode" id="cb24"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Clean up duplicates  </span></span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> teqtl.fdr05.kozak.bed <span class="kw">|</span> <span class="fu">uniq</span> <span class="op">&gt;</span> teqtl.fdr05.kozak.uniq.bed  </span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> non.teqtl.fdr05.kozak.bed <span class="kw">|</span> <span class="fu">uniq</span> <span class="op">&gt;</span> non.teqtl.fdr05.kozak.uniq.bed  </span>
@@ -959,6 +962,9 @@ SNPs
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span></code></pre></div>
 <pre><code>## png 
 ##   2</code></pre>
+</div>
+<div id="find-the-position-of-each-snp-relative-to-the-start-codon-1" class="section level3">
+<h3>Find the position of each SNP relative to the start codon</h3>
 <div class="sourceCode" id="cb31"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  </span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zcat</span> results.teqtl.fdr05.nohead.vcf.gz <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}&#39;</span> <span class="op">&gt;</span> results.teqtl.fdr05.table  </span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">zcat</span> results.nonteqtl.fdr05.nohead.vcf.gz <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}&#39;</span> <span class="op">&gt;</span> results.nonteqtl.fdr05.table </span></code></pre></div>
@@ -1035,6 +1041,9 @@ SNPs
 <span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Remove chr from chromosome number column</span></span>
 <span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>nonteqtl01bed<span class="sc">$</span>chrom <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&#39;^chr&#39;</span>, <span class="st">&#39;&#39;</span>, nonteqtl01bed<span class="sc">$</span>chrom)</span>
 <span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(nonteqtl01bed, <span class="st">&#39;non.teqtl.fdr01.kozak.bed&#39;</span>, <span class="at">quote =</span> <span class="cn">FALSE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span></code></pre></div>
+</div>
+<div id="intersect-snps-with-kozak-regions-2" class="section level3">
+<h3>Intersect SNPs with Kozak regions</h3>
 <div class="sourceCode" id="cb42"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Clean up duplicates  </span></span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> teqtl.fdr01.kozak.bed <span class="kw">|</span> <span class="fu">uniq</span> <span class="op">&gt;</span> teqtl.fdr01.kozak.uniq.bed  </span>
 <span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> non.teqtl.fdr01.kozak.bed <span class="kw">|</span> <span class="fu">uniq</span> <span class="op">&gt;</span> non.teqtl.fdr01.kozak.uniq.bed  </span>
@@ -1118,6 +1127,9 @@ SNPs
 <span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span></code></pre></div>
 <pre><code>## png 
 ##   2</code></pre>
+</div>
+<div id="find-the-position-of-each-snp-relative-to-the-start-codon-2" class="section level3">
+<h3>Find the position of each SNP relative to the start codon</h3>
 <div class="sourceCode" id="cb49"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  </span></span>
 <span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zcat</span> results.teqtl.fdr01.nohead.vcf.gz <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}&#39;</span> <span class="op">&gt;</span> results.teqtl.fdr01.table  </span>
 <span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="fu">zcat</span> results.nonteqtl.fdr01.nohead.vcf.gz <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}&#39;</span> <span class="op">&gt;</span> results.nonteqtl.fdr01.table  </span></code></pre></div>
