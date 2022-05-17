@@ -1251,7 +1251,16 @@ SNPs
 <span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>selected.txSE.merged <span class="ot">&lt;-</span> tempMin</span>
 <span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>selected.txSE.merged<span class="sc">$</span>chromEnd <span class="ot">&lt;-</span> tempMax<span class="sc">$</span>chromEnd</span>
 <span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(selected.txSE.merged, <span class="st">&#39;selected.txStart.txEnd.filtered.bed&#39;</span>, <span class="at">quote =</span> <span class="cn">FALSE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb70"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Assign target genes to miRNA targets</span></span></code></pre></div>
+<pre class="bas"><code>#Clean up annotation file headers
+awk &#39;{gsub(&quot; &quot;, &quot;_&quot;);print}&#39; mart_export_human_miRNA_target_GRCh37.p13.txt &gt; mart_export_human_miRNA_target_GRCh37.p13.table
+awk &#39;{gsub(&quot; &quot;, &quot;_&quot;);print}&#39; mart_export_human_regulatory_features_GRCh37.p13.txt &gt; mart_export_human_regulatory_features_GRCh37.p13.table
+awk &#39;{gsub(&quot; &quot;, &quot;_&quot;);print}&#39; mart_export_human_other_regulatory_regions_GRCh37.p13.txt &gt; mart_export_human_other_regulatory_regions_GRCh37.p13.table</code></pre>
+<div class="sourceCode" id="cb71"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Assign target genes to miRNA targets</span></span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>selected.txSE.merged <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&#39;selected.txStart.txEnd.filtered.bed&#39;</span>)</span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(selected.txSE.merged) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&#39;chrom&#39;</span>, <span class="st">&#39;chromStart&#39;</span>, <span class="st">&#39;chromEnd&#39;</span>, <span class="st">&#39;name&#39;</span>, <span class="st">&#39;score&#39;</span>, <span class="st">&#39;strand&#39;</span>)</span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>miRNA <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&#39;mart_export_human_miRNA_target_GRCh37.p13.table&#39;</span>)</span>
+<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(miRNA) <span class="ot">&lt;-</span> miRNA[<span class="dv">1</span>,]</span>
+<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>miRNA <span class="ot">&lt;-</span> miRNA[<span class="sc">-</span><span class="dv">1</span>,]</span></code></pre></div>
 </div>
 </div>
 

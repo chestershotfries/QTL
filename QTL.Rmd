@@ -467,8 +467,19 @@ selected.txSE.merged$chromEnd <- tempMax$chromEnd
 write.table(selected.txSE.merged, 'selected.txStart.txEnd.filtered.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
 
+```{bas, eval=F, echo=T}
+#Clean up annotation file headers
+awk '{gsub(" ", "_");print}' mart_export_human_miRNA_target_GRCh37.p13.txt > mart_export_human_miRNA_target_GRCh37.p13.table
+awk '{gsub(" ", "_");print}' mart_export_human_regulatory_features_GRCh37.p13.txt > mart_export_human_regulatory_features_GRCh37.p13.table
+awk '{gsub(" ", "_");print}' mart_export_human_other_regulatory_regions_GRCh37.p13.txt > mart_export_human_other_regulatory_regions_GRCh37.p13.table
+```
 ```{r}
 #Assign target genes to miRNA targets
+selected.txSE.merged <- read.table('selected.txStart.txEnd.filtered.bed')
+names(selected.txSE.merged) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+miRNA <- read.table('mart_export_human_miRNA_target_GRCh37.p13.table')
+names(miRNA) <- miRNA[1,]
+miRNA <- miRNA[-1,]
 
 ```
 
