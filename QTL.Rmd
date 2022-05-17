@@ -83,9 +83,9 @@ bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz 
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr10.nohead.vcf.gz  
 
 #Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
-echo Genes > results.fdr10  
-wc -l < non.teqtl.fdr10.names >> results.fdr10  
-wc -l < teqtl.fdr10.names >> results.fdr10  
+echo No_SNPs > results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.names) - $(zcat results.nonteqtl.fdr10.nohead.vcf.gz | wc -l) >> results.fdr10  
+expr $(wc -l < teqtl.fdr10.names) - $(zcat results.teqtl.fdr10.nohead.vcf.gz | wc -l) >> results.fdr10  
 echo SNPs >> results.fdr10  
 zcat results.nonteqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
 zcat results.teqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
@@ -206,9 +206,9 @@ bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz 
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.nohead.vcf.gz  
 
 #Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
-echo Genes > results.fdr05  
-wc -l < non.teqtl.fdr05.names >> results.fdr05  
-wc -l < teqtl.fdr05.names >> results.fdr05  
+echo No_SNPs > results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < teqtl.fdr05.names) - $(zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
 echo SNPs >> results.fdr05  
 zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
 zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
@@ -326,9 +326,9 @@ bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz 
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr01.nohead.vcf.gz  
 
 #Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
-echo Genes > results.fdr01  
-wc -l < non.teqtl.fdr01.names >> results.fdr01  
-wc -l < teqtl.fdr01.names >> results.fdr01  
+echo No_SNPs > results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.names) - $(zcat results.nonteqtl.fdr01.nohead.vcf.gz | wc -l) >> results.fdr01  
+expr $(wc -l < teqtl.fdr01.names) - $(zcat results.teqtl.fdr01.nohead.vcf.gz | wc -l) >> results.fdr01  
 echo SNPs >> results.fdr01  
 zcat results.nonteqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
 zcat results.teqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
@@ -444,5 +444,30 @@ wilcox.test(beta ~ mutated, data = allselected.merged, exact = FALSE)
 allselected.merged %>%
   ggplot(aes(x = mutated, y = FDR, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
 wilcox.test(FDR ~ mutated, data = allselected.merged, exact = FALSE)
+```
+
+```{bash, eval=F, echo=T}
+#Generate bed file of all genes transcription start and end sites from UCSC genome browser
+mysql --user=genome -N --host=genome-mysql.cse.ucsc.edu -A -D hg19 -e "select ensGene.chrom, txStart, txEnd, name2, score, strand value from ensGene, ensemblToGeneName where ensGene.name = ensemblToGeneName.name" | awk '{gsub(/chr/,"", $1); print }' | awk -v OFS='\t' '{$1=$1}1' > hg19.txStart.txEnd.bed
+#Subset for selected genes
+grep -f all.names hg19.txStart.txEnd.bed > selected.txStart.txEnd.bed 
+```
+
+```{r}
+#Generate bed file with transcription start and end sites of all selected genes
+selected.txSE <- read.table('selected.txStart.txEnd.bed')
+names(selected.txSE) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+tempMin <- selected.txSE[order(selected.txSE$name, selected.txSE$chromStart),]
+tempMin <- selected.txSE[!duplicated(selected.txSE$name),]
+tempMax <- selected.txSE[order(selected.txSE$name, -selected.txSE$chromEnd),]
+tempMax <- selected.txSE[!duplicated(selected.txSE$name),]
+selected.txSE.merged <- tempMin
+selected.txSE.merged$chromEnd <- tempMax$chromEnd
+write.table(selected.txSE.merged, 'selected.txStart.txEnd.filtered.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+```{r}
+#Assign target genes to miRNA targets
+
 ```
 
