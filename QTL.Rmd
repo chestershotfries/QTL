@@ -9,6 +9,7 @@ output:
 library(kableExtra)
 library(ggplot2)
 library(dplyr)
+library(tidyverse)
 setwd('~/Documents/QTL')
 ```
 
@@ -473,13 +474,20 @@ awk '{gsub(" ", "_");print}' mart_export_human_miRNA_target_GRCh37.p13.txt > mar
 awk '{gsub(" ", "_");print}' mart_export_human_regulatory_features_GRCh37.p13.txt > mart_export_human_regulatory_features_GRCh37.p13.table
 awk '{gsub(" ", "_");print}' mart_export_human_other_regulatory_regions_GRCh37.p13.txt > mart_export_human_other_regulatory_regions_GRCh37.p13.table
 ```
-```{r}
+
+```{r Assign target genes to miRNA targets, eval=F, echo=T}
 #Assign target genes to miRNA targets
 selected.txSE.merged <- read.table('selected.txStart.txEnd.filtered.bed')
 names(selected.txSE.merged) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
 miRNA <- read.table('mart_export_human_miRNA_target_GRCh37.p13.table')
 names(miRNA) <- miRNA[1,]
 miRNA <- miRNA[-1,]
+miRNA$found <- "NA"
+checkrange <- function(a, b){
+  any(selected.txSE.merged$chromStart <= a) & any(selected.txSE.merged$chromEnd >= b)
+}
+miRNA$found <- ifelse(mapply(checkrange, miRNA$`Start_(bp)`, miRNA$`End_(bp)`), selected.txSE.merged$name, NA)
+
 
 ```
 
