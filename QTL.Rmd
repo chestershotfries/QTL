@@ -493,4 +493,10 @@ miRNA$score <- 0
 miRNAbed <- miRNA[,c(1,2,3,7,8,6)]
 write.table(miRNAbed, 'miRNA.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
+```{bash, eval=F, echo=T}
+#Sort bed file
+sort -k1,1 -k2,2n miRNA.bed > miRNA.sorted.bed
+#Intersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.sorted.bed -wa -wb | bgzip > miRNA.results.vcf.gz
 
+```
