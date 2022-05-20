@@ -468,7 +468,7 @@ selected.txSE.merged$chromEnd <- tempMax$chromEnd
 write.table(selected.txSE.merged, 'selected.txStart.txEnd.filtered.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
 
-```{bas, eval=F, echo=T}
+```{bash, eval=F, echo=T}
 #Clean up annotation file headers
 awk '{gsub(" ", "_");print}' mart_export_human_miRNA_target_GRCh37.p13.txt > mart_export_human_miRNA_target_GRCh37.p13.table
 awk '{gsub(" ", "_");print}' mart_export_human_regulatory_features_GRCh37.p13.txt > mart_export_human_regulatory_features_GRCh37.p13.table
@@ -483,11 +483,14 @@ miRNA <- read.table('mart_export_human_miRNA_target_GRCh37.p13.table')
 names(miRNA) <- miRNA[1,]
 miRNA <- miRNA[-1,]
 miRNA$found <- "NA"
+#Function to check if position of miRNA is in gene
 checkrange <- function(a, b){
   any(selected.txSE.merged$chromStart <= a) & any(selected.txSE.merged$chromEnd >= b)
 }
 miRNA$found <- ifelse(mapply(checkrange, miRNA$`Start_(bp)`, miRNA$`End_(bp)`), selected.txSE.merged$name, NA)
-
-
+#Generate bed6 file
+miRNA$score <- 0
+miRNAbed <- miRNA[,c(1,2,3,7,8,6)]
+write.table(miRNAbed, 'miRNA.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
 
