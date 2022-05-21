@@ -496,7 +496,14 @@ write.table(miRNAbed, 'miRNA.bed', quote = FALSE, row.names = FALSE, col.names =
 ```{bash, eval=F, echo=T}
 #Sort bed file
 sort -k1,1 -k2,2n miRNA.bed > miRNA.sorted.bed
+#Split into teQTL and non-teQTL genes
+grep -f teqtl.fdr10.names miRNA.sorted.bed > miRNA.teqtl.fdr10.sorted.bed
+grep -f non.teqtl.fdr10.names miRNA.sorted.bed > miRNA.non.teqtl.fdr10.sorted.bed
+grep -f teqtl.fdr05.names miRNA.sorted.bed > miRNA.teqtl.fdr05.sorted.bed
+grep -f non.teqtl.fdr05.names miRNA.sorted.bed > miRNA.non.teqtl.fdr05.sorted.bed
+grep -f teqtl.fdr01.names miRNA.sorted.bed > miRNA.teqtl.fdr01.sorted.bed
+grep -f non.teqtl.fdr01.names miRNA.sorted.bed > miRNA.non.teqtl.fdr01.sorted.bed
 #Intersect with SNPs
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.sorted.bed -wa -wb | bgzip > miRNA.results.vcf.gz
-
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.teqtl.fdr10.sorted.bed -wa -wb | bgzip > miRNA.teqtl.fdr10.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.non.teqtl.fdr10.sorted.bed -wa -wb | bgzip > miRNA.non.teqtl.fdr10.results.vcf.gz
 ```
