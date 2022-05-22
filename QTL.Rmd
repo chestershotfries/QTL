@@ -506,4 +506,85 @@ grep -f non.teqtl.fdr01.names miRNA.sorted.bed > miRNA.non.teqtl.fdr01.sorted.be
 #Intersect with SNPs
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.teqtl.fdr10.sorted.bed -wa -wb | bgzip > miRNA.teqtl.fdr10.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.non.teqtl.fdr10.sorted.bed -wa -wb | bgzip > miRNA.non.teqtl.fdr10.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.teqtl.fdr05.sorted.bed -wa -wb | bgzip > miRNA.teqtl.fdr05.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.non.teqtl.fdr05.sorted.bed -wa -wb | bgzip > miRNA.non.teqtl.fdr05.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.teqtl.fdr01.sorted.bed -wa -wb | bgzip > miRNA.teqtl.fdr01.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.non.teqtl.fdr01.sorted.bed -wa -wb | bgzip > miRNA.non.teqtl.fdr01.results.vcf.gz
+#Create contingency table of miRNA targets for teQTL and non-teQTL genes  
+echo No_SNPs > miRNA.results.fdr10  
+expr $(wc -l < miRNA.non.teqtl.fdr10.sorted.bed) - $(zcat miRNA.non.teqtl.fdr10.results.vcf.gz | wc -l) >> miRNA.results.fdr10  
+expr $(wc -l < miRNA.teqtl.fdr10.sorted.bed) - $(zcat miRNA.teqtl.fdr10.results.vcf.gz | wc -l) >> miRNA.results.fdr10  
+echo SNPs >> miRNA.results.fdr10  
+zcat miRNA.non.teqtl.fdr10.results.vcf.gz | wc -l >> miRNA.results.fdr10   
+zcat miRNA.teqtl.fdr10.results.vcf.gz | wc -l >> miRNA.results.fdr10  
+
+paste - - - < miRNA.results.fdr10  > miRNA.results.fdr10.tab
+
+echo No_SNPs > miRNA.results.fdr05  
+expr $(wc -l < miRNA.non.teqtl.fdr05.sorted.bed) - $(zcat miRNA.non.teqtl.fdr05.results.vcf.gz | wc -l) >> miRNA.results.fdr05  
+expr $(wc -l < miRNA.teqtl.fdr05.sorted.bed) - $(zcat miRNA.teqtl.fdr05.results.vcf.gz | wc -l) >> miRNA.results.fdr05  
+echo SNPs >> miRNA.results.fdr05  
+zcat miRNA.non.teqtl.fdr05.results.vcf.gz | wc -l >> miRNA.results.fdr05   
+zcat miRNA.teqtl.fdr05.results.vcf.gz | wc -l >> miRNA.results.fdr05  
+
+paste - - - < miRNA.results.fdr05  > miRNA.results.fdr05.tab
+
+echo No_SNPs > miRNA.results.fdr01  
+expr $(wc -l < miRNA.non.teqtl.fdr01.sorted.bed) - $(zcat miRNA.non.teqtl.fdr01.results.vcf.gz | wc -l) >> miRNA.results.fdr01  
+expr $(wc -l < miRNA.teqtl.fdr01.sorted.bed) - $(zcat miRNA.teqtl.fdr01.results.vcf.gz | wc -l) >> miRNA.results.fdr01  
+echo SNPs >> miRNA.results.fdr01  
+zcat miRNA.non.teqtl.fdr01.results.vcf.gz | wc -l >> miRNA.results.fdr01   
+zcat miRNA.teqtl.fdr01.results.vcf.gz | wc -l >> miRNA.results.fdr01  
+
+paste - - - < miRNA.results.fdr01  > miRNA.results.fdr01.tab
+```
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.10'}
+miRNA.results.fdr10 <- read.table('miRNA.results.fdr10.tab')
+#Name rows and columns of contingency table
+rownames(miRNA.results.fdr10) <- miRNA.results.fdr10[,1]
+miRNA.results.fdr10 <- miRNA.results.fdr10[,-1]
+names(miRNA.results.fdr10) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(miRNA.results.fdr10),full_width = F)
+#Fisher's exact test
+fisher.test(miRNA.results.fdr10)
+#Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr10, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+pdf(file = '~/Documents/QTL/mosaic.miRNA.fdr10.pdf', width = 5, height = 4)
+mosaicplot(miRNA.results.fdr10, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+dev.off()
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.05'}
+miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
+#Name rows and columns of contingency table
+rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
+miRNA.results.fdr05 <- miRNA.results.fdr05[,-1]
+names(miRNA.results.fdr05) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(miRNA.results.fdr05),full_width = F)
+#Fisher's exact test
+fisher.test(miRNA.results.fdr05)
+#Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+pdf(file = '~/Documents/QTL/mosaic.miRNA.fdr05.pdf', width = 5, height = 4)
+mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+dev.off()
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.01'}
+miRNA.results.fdr01 <- read.table('miRNA.results.fdr01.tab')
+#Name rows and columns of contingency table
+rownames(miRNA.results.fdr01) <- miRNA.results.fdr01[,1]
+miRNA.results.fdr01 <- miRNA.results.fdr01[,-1]
+names(miRNA.results.fdr01) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(miRNA.results.fdr01),full_width = F)
+#Fisher's exact test
+fisher.test(miRNA.results.fdr01)
+#Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+pdf(file = '~/Documents/QTL/mosaic.miRNA.fdr01.pdf', width = 5, height = 4)
+mosaicplot(miRNA.results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+dev.off()
 ```
