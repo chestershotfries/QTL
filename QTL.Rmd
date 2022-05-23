@@ -444,7 +444,7 @@ allselected.merged %>%
   ggplot(aes(x = mutated, y = beta, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
 wilcox.test(beta ~ mutated, data = allselected.merged, exact = FALSE)
 ```
-### miRNA targets
+#### miRNA targets
 ```{bash, eval=F, echo=T}
 #Generate bed file of all genes transcription start and end sites from UCSC genome browser
 mysql --user=genome -N --host=genome-mysql.cse.ucsc.edu -A -D hg19 -e "select ensGene.chrom, txStart, txEnd, name2, score, strand value from ensGene, ensemblToGeneName where ensGene.name = ensemblToGeneName.name" | awk '{gsub(/chr/,"", $1); print }' | awk -v OFS='\t' '{$1=$1}1' > hg19.txStart.txEnd.bed
@@ -586,3 +586,108 @@ pdf(file = '~/Documents/QTL/mosaic.miRNA.fdr01.pdf', width = 5, height = 4)
 mosaicplot(miRNA.results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01')
 dev.off()
 ```
+
+#### SNPs in miRNA sites
+### FDR <0.10
+```{bash, eval=F, echo=T}
+#Generate bed file of teQTL and non-teQTL SNPs
+cat teqtl.fdr10.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > teqtl.fdr10.snps.sorted.bed
+cat non.teqtl.fdr10.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > non.teqtl.fdr10.snps.sorted.bed
+#Intersect with miRNA sites
+bedtools intersect -a miRNA.sorted.bed -b teqtl.fdr10.snps.sorted.bed -wa -wb > teqtl.fdr10.miRNA.snps.bed
+bedtools intersect -a miRNA.sorted.bed -b non.teqtl.fdr10.snps.sorted.bed -wa -wb > non.teqtl.fdr10.miRNA.snps.bed
+#Generate contingency table
+echo No_miRNA_site > fdr10.miRNA
+expr $(wc -l < non.teqtl.fdr10.table) - $(wc -l < non.teqtl.fdr10.miRNA.snps.bed) >> fdr10.miRNA
+expr $(wc -l < teqtl.fdr10.table) - $(wc -l < teqtl.fdr10.miRNA.snps.bed) >> fdr10.miRNA
+echo miRNA_site >> fdr10.miRNA
+wc -l < non.teqtl.fdr10.miRNA.snps.bed >> fdr10.miRNA 
+wc -l < teqtl.fdr10.miRNA.snps.bed >> fdr10.miRNA
+paste - - - < fdr10.miRNA > fdr10.miRNA.tab  
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for SNPS in miRNA targets FDR <0.10'}
+fdr10.miRNA <- read.table('fdr10.miRNA.tab')
+#Name rows and columns of contingency table
+rownames(fdr10.miRNA) <- fdr10.miRNA[,1]
+fdr10.miRNA <- fdr10.miRNA[,-1]
+names(fdr10.miRNA) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr10.miRNA),full_width = F)
+#Fisher's exact test
+fisher.test(fdr10.miRNA)
+#Mosaic plot of contingency table
+mosaicplot(fdr10.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+pdf(file = '~/Documents/QTL/mosaic.fdr10.miRNA.pdf', width = 5, height = 4)
+mosaicplot(fdr10.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+dev.off()
+```
+### FDR <0.05
+```{bash, eval=F, echo=T}
+#Generate bed file of teQTL and non-teQTL SNPs
+cat teqtl.fdr05.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > teqtl.fdr05.snps.sorted.bed
+cat non.teqtl.fdr05.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > non.teqtl.fdr05.snps.sorted.bed
+#Intersect with miRNA sites
+bedtools intersect -a miRNA.sorted.bed -b teqtl.fdr05.snps.sorted.bed -wa -wb > teqtl.fdr05.miRNA.snps.bed
+bedtools intersect -a miRNA.sorted.bed -b non.teqtl.fdr05.snps.sorted.bed -wa -wb > non.teqtl.fdr05.miRNA.snps.bed
+#Generate contingency table
+echo No_miRNA_site > fdr05.miRNA
+expr $(wc -l < non.teqtl.fdr05.table) - $(wc -l < non.teqtl.fdr05.miRNA.snps.bed) >> fdr05.miRNA
+expr $(wc -l < teqtl.fdr05.table) - $(wc -l < teqtl.fdr05.miRNA.snps.bed) >> fdr05.miRNA
+echo miRNA_site >> fdr05.miRNA
+wc -l < non.teqtl.fdr05.miRNA.snps.bed >> fdr05.miRNA 
+wc -l < teqtl.fdr05.miRNA.snps.bed >> fdr05.miRNA
+paste - - - < fdr05.miRNA > fdr05.miRNA.tab  
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for SNPS in miRNA targets FDR <0.05'}
+fdr05.miRNA <- read.table('fdr05.miRNA.tab')
+#Name rows and columns of contingency table
+rownames(fdr05.miRNA) <- fdr05.miRNA[,1]
+fdr05.miRNA <- fdr05.miRNA[,-1]
+names(fdr05.miRNA) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr05.miRNA),full_width = F)
+#Fisher's exact test
+fisher.test(fdr05.miRNA)
+#Mosaic plot of contingency table
+mosaicplot(fdr05.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+pdf(file = '~/Documents/QTL/mosaic.fdr05.miRNA.pdf', width = 5, height = 4)
+mosaicplot(fdr05.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+dev.off()
+```
+### FDR <0.01
+```{bash, eval=F, echo=T}
+#Generate bed file of teQTL and non-teQTL SNPs
+cat teqtl.fdr01.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > teqtl.fdr01.snps.sorted.bed
+cat non.teqtl.fdr01.table | awk '{print $2}' | awk -F':' -v OFS='\t' '{print $1, $2, $2}' | sort -k1,1 -k2,2n > non.teqtl.fdr01.snps.sorted.bed
+#Intersect with miRNA sites
+bedtools intersect -a miRNA.sorted.bed -b teqtl.fdr01.snps.sorted.bed -wa -wb > teqtl.fdr01.miRNA.snps.bed
+bedtools intersect -a miRNA.sorted.bed -b non.teqtl.fdr01.snps.sorted.bed -wa -wb > non.teqtl.fdr01.miRNA.snps.bed
+#Generate contingency table
+echo No_miRNA_site > fdr01.miRNA
+expr $(wc -l < non.teqtl.fdr01.table) - $(wc -l < non.teqtl.fdr01.miRNA.snps.bed) >> fdr01.miRNA
+expr $(wc -l < teqtl.fdr01.table) - $(wc -l < teqtl.fdr01.miRNA.snps.bed) >> fdr01.miRNA
+echo miRNA_site >> fdr01.miRNA
+wc -l < non.teqtl.fdr01.miRNA.snps.bed >> fdr01.miRNA 
+wc -l < teqtl.fdr01.miRNA.snps.bed >> fdr01.miRNA
+paste - - - < fdr01.miRNA > fdr01.miRNA.tab  
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for SNPS in miRNA targets FDR <0.01'}
+fdr01.miRNA <- read.table('fdr01.miRNA.tab')
+#Name rows and columns of contingency table
+rownames(fdr01.miRNA) <- fdr01.miRNA[,1]
+fdr01.miRNA <- fdr01.miRNA[,-1]
+names(fdr01.miRNA) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr01.miRNA),full_width = F)
+#Fisher's exact test
+fisher.test(fdr01.miRNA)
+#Mosaic plot of contingency table
+mosaicplot(fdr01.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+pdf(file = '~/Documents/QTL/mosaic.fdr01.miRNA.pdf', width = 5, height = 4)
+mosaicplot(fdr01.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+dev.off()
+```
+
