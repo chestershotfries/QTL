@@ -588,7 +588,7 @@ mosaicplot(miRNA.results.fdr01, col = c('lightblue','pink'), main = 'FDR <= 0.01
 dev.off()
 ```
 
-#### SNPs in miRNA sites
+# SNPs in miRNA sites
 ### FDR <0.10
 ```{bash, eval=F, echo=T}
 #Generate bed file of teQTL and non-teQTL SNPs
