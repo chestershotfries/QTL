@@ -443,11 +443,8 @@ wilcox.test(permute.pval ~ mutated, data = allselected.merged, exact = FALSE)
 allselected.merged %>%
   ggplot(aes(x = mutated, y = beta, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
 wilcox.test(beta ~ mutated, data = allselected.merged, exact = FALSE)
-allselected.merged %>%
-  ggplot(aes(x = mutated, y = FDR, fill = mutated)) + geom_violin() + scale_fill_manual(values = c('pink', 'light blue')) + theme_classic() + ggtitle('') + geom_boxplot(width=0.1, color="black", alpha=0.2)  + theme(legend.position = 'none')
-wilcox.test(FDR ~ mutated, data = allselected.merged, exact = FALSE)
 ```
-
+### miRNA targets
 ```{bash, eval=F, echo=T}
 #Generate bed file of all genes transcription start and end sites from UCSC genome browser
 mysql --user=genome -N --host=genome-mysql.cse.ucsc.edu -A -D hg19 -e "select ensGene.chrom, txStart, txEnd, name2, score, strand value from ensGene, ensemblToGeneName where ensGene.name = ensemblToGeneName.name" | awk '{gsub(/chr/,"", $1); print }' | awk -v OFS='\t' '{$1=$1}1' > hg19.txStart.txEnd.bed
@@ -474,6 +471,7 @@ awk '{gsub(" ", "_");print}' mart_export_human_miRNA_target_GRCh37.p13.txt > mar
 awk '{gsub(" ", "_");print}' mart_export_human_regulatory_features_GRCh37.p13.txt > mart_export_human_regulatory_features_GRCh37.p13.table
 awk '{gsub(" ", "_");print}' mart_export_human_other_regulatory_regions_GRCh37.p13.txt > mart_export_human_other_regulatory_regions_GRCh37.p13.table
 ```
+
 
 ```{r Assign target genes to miRNA targets, eval=F, echo=T}
 #Assign target genes to miRNA targets
@@ -538,7 +536,7 @@ zcat miRNA.teqtl.fdr01.results.vcf.gz | wc -l >> miRNA.results.fdr01
 
 paste - - - < miRNA.results.fdr01  > miRNA.results.fdr01.tab
 ```
-```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.10'}
+```{r 'Fisher\'s exact test and mosaic plot of results for miRNA targets FDR <0.10'}
 miRNA.results.fdr10 <- read.table('miRNA.results.fdr10.tab')
 #Name rows and columns of contingency table
 rownames(miRNA.results.fdr10) <- miRNA.results.fdr10[,1]
@@ -555,7 +553,7 @@ mosaicplot(miRNA.results.fdr10, col = c('lightblue','pink'), main = 'FDR <= 0.10
 dev.off()
 ```
 
-```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.05'}
+```{r 'Fisher\'s exact test and mosaic plot of results for miRNA targets FDR <0.05'}
 miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
 #Name rows and columns of contingency table
 rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
@@ -572,7 +570,7 @@ mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05
 dev.off()
 ```
 
-```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.01'}
+```{r 'Fisher\'s exact test and mosaic plot of results for miRNA targets FDR <0.01'}
 miRNA.results.fdr01 <- read.table('miRNA.results.fdr01.tab')
 #Name rows and columns of contingency table
 rownames(miRNA.results.fdr01) <- miRNA.results.fdr01[,1]
