@@ -692,3 +692,109 @@ mosaicplot(fdr01.miRNA, col = c('lightblue','pink'), main = 'FDR <= 0.01')
 dev.off()
 ```
 
+# Exons
+
+```{bash, eval=F, echo=T}
+#Extract exons from Gencode annotation
+cat gencode.v19.annotation.gtf | grep "exon" | awk -vOFS="\t" '{print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | uniq > exons.uniq.bed
+awk '{sub(/\..*/,"",$4)} 1' exons.uniq.bed | awk 'sub(/\./,"0",$5)' | awk 'gsub(/^chr/,"",$1)' | tr -s ' ' '\t' | sort -k1,1 -k2,2n > exons.uniq.sorted.bed
+#Split into teQTL and non-teQTL
+grep -f teqtl.fdr10.names exons.uniq.sorted.bed > teqtl.fdr10.exons.bed
+grep -f non.teqtl.fdr10.names exons.uniq.sorted.bed > non.teqtl.fdr10.exons.bed
+grep -f non.teqtl.fdr05.names exons.uniq.sorted.bed > non.teqtl.fdr05.exons.bed
+grep -f non.teqtl.fdr01.names exons.uniq.sorted.bed > non.teqtl.fdr01.exons.bed
+grep -f teqtl.fdr05.names exons.uniq.sorted.bed > teqtl.fdr05.exons.bed
+grep -f teqtl.fdr01.names exons.uniq.sorted.bed > teqtl.fdr01.exons.bed
+#Intsersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.exons.bed -wa -wb | bgzip > teqtl.fdr10.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.exons.bed -wa -wb | bgzip > non.teqtl.fdr10.exons.results.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.exons.bed -wa -wb | bgzip > teqtl.fdr05.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.exons.bed -wa -wb | bgzip > teqtl.fdr01.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.exons.bed -wa -wb | bgzip > non.teqtl.fdr01.exons.results.vcf.gz
+#Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > exons.results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.exons.bed) - $(zcat non.teqtl.fdr10.exons.results.vcf.gz | wc -l) >> exons.results.fdr10 
+expr $(wc -l < teqtl.fdr10.exons.bed) - $(zcat teqtl.fdr10.exons.results.vcf.gz | wc -l) >> exons.results.fdr10  
+echo SNPs >> exons.results.fdr10  
+zcat non.teqtl.fdr10.exons.results.vcf.gz | wc -l >> exons.results.fdr10  
+zcat teqtl.fdr10.exons.results.vcf.gz | wc -l >> exons.results.fdr10  
+
+paste - - - < exons.results.fdr10 > exons.results.fdr10.tab  
+
+echo No_SNPs > exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.exons.bed) - $(zcat non.teqtl.fdr05.exons.results.vcf.gz | wc -l) >> exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.exons.bed) - $(zcat teqtl.fdr05.exons.results.vcf.gz | wc -l) >> exons.results.fdr05  
+echo SNPs >> exons.results.fdr05  
+zcat non.teqtl.fdr05.exons.results.vcf.gz | wc -l >> exons.results.fdr05  
+zcat teqtl.fdr05.exons.results.vcf.gz | wc -l >> exons.results.fdr05  
+
+paste - - - < exons.results.fdr05 > exons.results.fdr05.tab  
+
+echo No_SNPs > exons.results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.exons.bed) - $(zcat non.teqtl.fdr01.exons.results.vcf.gz | wc -l) >> exons.results.fdr01 
+expr $(wc -l < teqtl.fdr01.exons.bed) - $(zcat teqtl.fdr01.exons.results.vcf.gz | wc -l) >> exons.results.fdr01  
+echo SNPs >> exons.results.fdr01  
+zcat non.teqtl.fdr01.exons.results.vcf.gz | wc -l >> exons.results.fdr01  
+zcat teqtl.fdr01.exons.results.vcf.gz | wc -l >> exons.results.fdr01  
+
+paste - - - < exons.results.fdr01 > exons.results.fdr01.tab  
+```
+
+```{r}
+fdr10.exons <- read.table('exons.results.fdr10.tab')
+#Name rows and columns of contingency table
+rownames(fdr10.exons) <- fdr10.exons[,1]
+fdr10.exons <- fdr10.exons[,-1]
+names(fdr10.exons) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr10.exons),full_width = F)
+#Fisher's exact test
+fisher.test(fdr10.exons)
+#Mosaic plot of contingency table
+mosaicplot(fdr10.exons, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+pdf(file = '~/Documents/QTL/mosaic.fdr10.exons.pdf', width = 5, height = 4)
+mosaicplot(fdr10.exons, col = c('lightblue','pink'), main = 'FDR <= 0.10')
+dev.off()
+```
+
+```{r}
+fdr05.exons <- read.table('exons.results.fdr05.tab')
+#Name rows and columns of contingency table
+rownames(fdr05.exons) <- fdr05.exons[,1]
+fdr05.exons <- fdr05.exons[,-1]
+names(fdr05.exons) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr05.exons),full_width = F)
+#Fisher's exact test
+fisher.test(fdr05.exons)
+#Mosaic plot of contingency table
+mosaicplot(fdr05.exons, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+pdf(file = '~/Documents/QTL/mosaic.fdr05.exons.pdf', width = 5, height = 4)
+mosaicplot(fdr05.exons, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+dev.off()
+```
+
+```{r}
+fdr01.exons <- read.table('exons.results.fdr01.tab')
+#Name rows and columns of contingency table
+rownames(fdr01.exons) <- fdr01.exons[,1]
+fdr01.exons <- fdr01.exons[,-1]
+names(fdr01.exons) <- c('Non-teQTL', 'teQTL')
+#Contingency table
+kable_classic(kbl(fdr01.exons),full_width = F)
+#Fisher's exact test
+fisher.test(fdr01.exons)
+#Mosaic plot of contingency table
+mosaicplot(fdr01.exons, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+pdf(file = '~/Documents/QTL/mosaic.fdr01.exons.pdf', width = 5, height = 4)
+mosaicplot(fdr01.exons, col = c('lightblue','pink'), main = 'FDR <= 0.01')
+dev.off()
+```
+
+# Introns
+
+```{bash, eval=F, echo=T}
+cat gencode.v19.annotation.gtf | grep "intron" | awk -vOFS="\t" '{print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | uniq > introns.uniq.bed
+awk '{sub(/\..*/,"",$4)} 1' introns.uniq.bed | awk 'sub(/\./,"0",$5)' | awk 'gsub(/^chr/,"",$1)' | tr -s ' ' '\t' | sort -k1,1 -k2,2n > introns.uniq.sorted.bed
+```
