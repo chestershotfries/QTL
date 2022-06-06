@@ -693,21 +693,45 @@ dev.off()
 ```
 
 # Exons
+Exon coordinates downloaded from UCSC table browser
+Transcript and Gene IDs from biomart GRCh37
+```{bash, eval=F, echo=T}
+#Clean up bed file from UCSC table browser
+cat hg19.exons.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.exons.cleaned.bed
+```
+
+```{r}
+hg19.exons <- read.table('hg19.exons.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.exons) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.exons <- hg19.exons %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.exons) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.exons, 'hg19.exons.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
 
 ```{bash, eval=F, echo=T}
-#Extract exons from Gencode annotation
-cat gencode.v19.annotation.gtf | grep "exon" | awk -vOFS="\t" '{print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | uniq > exons.uniq.bed
-awk '{sub(/\..*/,"",$4)} 1' exons.uniq.bed | awk 'sub(/\./,"0",$5)' | awk 'gsub(/^chr/,"",$1)' | tr -s ' ' '\t' | sort -k1,1 -k2,2n > exons.uniq.sorted.bed
+#Merge bedfile
+cut -f 4 input.bed | sort | uniq | while read C
+do
+     awk -v C=${C} '($4==C)' input.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge >> result.bed
+done
+
+
 #Split into teQTL and non-teQTL
-grep -f teqtl.fdr10.names exons.uniq.sorted.bed > teqtl.fdr10.exons.bed
-grep -f non.teqtl.fdr10.names exons.uniq.sorted.bed > non.teqtl.fdr10.exons.bed
-grep -f non.teqtl.fdr05.names exons.uniq.sorted.bed > non.teqtl.fdr05.exons.bed
-grep -f non.teqtl.fdr01.names exons.uniq.sorted.bed > non.teqtl.fdr01.exons.bed
-grep -f teqtl.fdr05.names exons.uniq.sorted.bed > teqtl.fdr05.exons.bed
-grep -f teqtl.fdr01.names exons.uniq.sorted.bed > teqtl.fdr01.exons.bed
+grep -f teqtl.fdr10.names hg19.exons.geneid.sorted.bed > teqtl.fdr10.exons.bed
+grep -f non.teqtl.fdr10.names hg19.exons.geneid.sorted.bed > non.teqtl.fdr10.exons.bed
+grep -f non.teqtl.fdr05.names hg19.exons.geneid.sorted.bed > non.teqtl.fdr05.exons.bed
+grep -f non.teqtl.fdr01.names hg19.exons.geneid.sorted.bed > non.teqtl.fdr01.exons.bed
+grep -f teqtl.fdr05.names hg19.exons.geneid.sorted.bed > teqtl.fdr05.exons.bed
+grep -f teqtl.fdr01.names hg19.exons.geneid.sorted.bed > teqtl.fdr01.exons.bed
 #Intsersect with SNPs
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.exons.bed -wa -wb | bgzip > teqtl.fdr10.exons.results.vcf.gz
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.exons.bed -wa -wb | bgzip > non.teqtl.fdr10.exons.results.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.exons.bed -wa -wb | bgzip > non.teqtl.fdr10.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.exons.bed -wa -wb | bgzip > teqtl.fdr05.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.exons.bed -wa -wb | bgzip > teqtl.fdr01.exons.results.vcf.gz
@@ -793,10 +817,28 @@ dev.off()
 ```
 
 # Introns
+Intron coordinates downloaded from UCSC table browser
+Transcript and Gene IDs from biomart GRCh37
+```{bash, eval=F, echo=T}
+#Clean up bed file from UCSC table browser
+cat hg19.introns.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.introns.cleaned.bed
+```
+
+```{r}
+hg19.introns <- read.table('hg19.introns.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.introns) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.introns <- hg19.introns %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.introns) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.introns, 'hg19.introns.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
 
 ```{bash, eval=F, echo=T}
-cat gencode.v19.annotation.gtf | grep "intron" | awk -vOFS="\t" '{print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | uniq > introns.uniq.bed
-awk '{sub(/\..*/,"",$4)} 1' introns.uniq.bed | awk 'sub(/\./,"0",$5)' | awk 'gsub(/^chr/,"",$1)' | tr -s ' ' '\t' | sort -k1,1 -k2,2n > introns.uniq.sorted.bed
 #Split into teQTL and non-teQTL
 grep -f teqtl.fdr10.names introns.uniq.sorted.bed > teqtl.fdr10.introns.bed
 grep -f non.teqtl.fdr10.names introns.uniq.sorted.bed > non.teqtl.fdr10.introns.bed
@@ -804,14 +846,56 @@ grep -f non.teqtl.fdr05.names introns.uniq.sorted.bed > non.teqtl.fdr05.introns.
 grep -f non.teqtl.fdr01.names introns.uniq.sorted.bed > non.teqtl.fdr01.introns.bed
 grep -f teqtl.fdr05.names introns.uniq.sorted.bed > teqtl.fdr05.introns.bed
 grep -f teqtl.fdr01.names introns.uniq.sorted.bed > teqtl.fdr01.introns.bed
-#Intsersect with SNPs
+#Remove exons
+grep -vf teqtl.fdr10.exons.bed teqtl.fdr10.introns.bed > teqtl.fdr10.introns.exclude.exons.bed
+grep -vf non.teqtl.fdr10.exons.bed non.teqtl.fdr10.introns.bed > non.teqtl.fdr10.introns.exclude.exons.bed
+grep -vf teqtl.fdr05.exons.bed teqtl.fdr05.introns.bed > teqtl.fdr05.introns.exclude.exons.bed
+grep -vf non.teqtl.fdr05.exons.bed non.teqtl.fdr05.introns.bed > non.teqtl.fdr05.introns.exclude.exons.bed
+grep -vf teqtl.fdr01.exons.bed teqtl.fdr01.introns.bed > teqtl.fdr01.introns.exclude.exons.bed
+grep -vf non.teqtl.fdr01.exons.bed non.teqtl.fdr01.introns.bed > non.teqtl.fdr01.introns.exclude.exons.bed
+#Intsersect with SNPs with exons excluded
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.introns.exclude.exons.bed -wa -wb | bgzip > teqtl.fdr10.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.introns.exclude.exons.bed -wa -wb | bgzip > non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.introns.exclude.exons.bed -wa -wb | bgzip > teqtl.fdr05.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.introns.exclude.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.introns.exclude.exons.bed -wa -wb | bgzip > teqtl.fdr01.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.introns.exclude.exons.bed -wa -wb | bgzip > non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz
+#Intsersect with SNPs with exons included
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.introns.bed -wa -wb | bgzip > teqtl.fdr10.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.introns.bed -wa -wb | bgzip > non.teqtl.fdr10.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.introns.bed -wa -wb | bgzip > teqtl.fdr05.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.introns.bed -wa -wb | bgzip > non.teqtl.fdr05.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.introns.bed -wa -wb | bgzip > teqtl.fdr01.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.introns.bed -wa -wb | bgzip > non.teqtl.fdr01.introns.results.vcf.gz
-#Create contingency table for teQTL and non-teQTL genes  
+#Create contingency table for teQTL and non-teQTL genes with exons excluded
+echo No_SNPs > introns.exclude.exons.results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr10 
+expr $(wc -l < teqtl.fdr10.introns.exclude.exons.bed) - $(zcat teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr10  
+echo SNPs >> introns.exclude.exons.results.fdr10  
+zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr10  
+zcat teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr10  
+
+paste - - - < introns.exclude.exons.results.fdr10 > introns.exclude.exons.results.fdr10.tab  
+
+echo No_SNPs > introns.exclude.exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.introns.exclude.exons.bed) - $(zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr05  
+echo SNPs >> introns.exclude.exons.results.fdr05  
+zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr05  
+zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr05  
+
+paste - - - < introns.exclude.exons.results.fdr05 > introns.exclude.exons.results.fdr05.tab  
+
+echo No_SNPs > introns.exclude.exons.results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr01 
+expr $(wc -l < teqtl.fdr01.introns.exclude.exons.bed) - $(zcat teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr01  
+echo SNPs >> introns.exclude.exons.results.fdr01  
+zcat non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr01  
+zcat teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr01  
+
+paste - - - < introns.exclude.exons.results.fdr01 > introns.exclude.exons.results.fdr01.tab  
+
+#Create contingency table for teQTL and non-teQTL genes with exons included  
 echo No_SNPs > introns.results.fdr10  
 expr $(wc -l < non.teqtl.fdr10.introns.bed) - $(zcat non.teqtl.fdr10.introns.results.vcf.gz | wc -l) >> introns.results.fdr10 
 expr $(wc -l < teqtl.fdr10.introns.bed) - $(zcat teqtl.fdr10.introns.results.vcf.gz | wc -l) >> introns.results.fdr10  
@@ -840,8 +924,8 @@ zcat teqtl.fdr01.introns.results.vcf.gz | wc -l >> introns.results.fdr01
 paste - - - < introns.results.fdr01 > introns.results.fdr01.tab  
 ```
 
-```{r}
-fdr10.introns <- read.table('introns.results.fdr10.tab')
+```{r, eval=F, echo=T}
+fdr10.introns <- read.table('introns.exclude.exons.results.fdr10.tab')
 #Name rows and columns of contingency table
 rownames(fdr10.introns) <- fdr10.introns[,1]
 fdr10.introns <- fdr10.introns[,-1]
@@ -857,8 +941,8 @@ mosaicplot(fdr10.introns, col = c('lightblue','pink'), main = 'FDR <= 0.10')
 dev.off()
 ```
 
-```{r}
-fdr05.introns <- read.table('introns.results.fdr05.tab')
+```{r, eval=F, echo=T}
+fdr05.introns <- read.table('introns.exclude.exons.results.fdr05.tab')
 #Name rows and columns of contingency table
 rownames(fdr05.introns) <- fdr05.introns[,1]
 fdr05.introns <- fdr05.introns[,-1]
@@ -874,8 +958,8 @@ mosaicplot(fdr05.introns, col = c('lightblue','pink'), main = 'FDR <= 0.05')
 dev.off()
 ```
 
-```{r}
-fdr01.introns <- read.table('introns.results.fdr01.tab')
+```{r, eval=F, echo=T}
+fdr01.introns <- read.table('introns.exclude.exons.results.fdr01.tab')
 #Name rows and columns of contingency table
 rownames(fdr01.introns) <- fdr01.introns[,1]
 fdr01.introns <- fdr01.introns[,-1]
