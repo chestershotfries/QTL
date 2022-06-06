@@ -693,8 +693,8 @@ dev.off()
 ```
 
 # Exons
-Exon coordinates downloaded from UCSC table browser
-Transcript and Gene IDs from biomart GRCh37
+Exon coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
 ```{bash, eval=F, echo=T}
 #Clean up bed file from UCSC table browser
 cat hg19.exons.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.exons.cleaned.bed
@@ -818,8 +818,8 @@ dev.off()
 ```
 
 # Introns
-Intron coordinates downloaded from UCSC table browser
-Transcript and Gene IDs from biomart GRCh37
+Intron coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
 ```{bash, eval=F, echo=T}
 #Clean up bed file from UCSC table browser
 cat hg19.introns.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.introns.cleaned.bed

@@ -1761,8 +1761,8 @@ miRNA_site
 </div>
 <div id="exons" class="section level1">
 <h1>Exons</h1>
-<p>Exon coordinates downloaded from UCSC table browser Transcript and
-Gene IDs from biomart GRCh37</p>
+<p>Exon coordinates downloaded from UCSC table browser<br />
+Transcript and Gene IDs from biomart GRCh37</p>
 <div class="sourceCode" id="cb109"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Clean up bed file from UCSC table browser</span></span>
 <span id="cb109-2"><a href="#cb109-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> hg19.exons.bed <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{sub(/\..*/,&quot;&quot;,$4)} 1&#39;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{sub(/^chr/,&quot;&quot;,$1)} 1&#39;</span> <span class="kw">|</span> <span class="fu">tr</span> <span class="st">&#39; &#39;</span> <span class="st">&#39;\t&#39;</span> <span class="op">&gt;</span> hg19.exons.cleaned.bed</span></code></pre></div>
 <div class="sourceCode" id="cb110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1" aria-hidden="true" tabindex="-1"></a>hg19.exons <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&#39;hg19.exons.cleaned.bed&#39;</span>)</span>
@@ -2026,8 +2026,8 @@ SNPs
 </div>
 <div id="introns" class="section level1">
 <h1>Introns</h1>
-<p>Intron coordinates downloaded from UCSC table browser Transcript and
-Gene IDs from biomart GRCh37</p>
+<p>Intron coordinates downloaded from UCSC table browser<br />
+Transcript and Gene IDs from biomart GRCh37</p>
 <div class="sourceCode" id="cb130"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb130-1"><a href="#cb130-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Clean up bed file from UCSC table browser</span></span>
 <span id="cb130-2"><a href="#cb130-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> hg19.introns.bed <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{sub(/\..*/,&quot;&quot;,$4)} 1&#39;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{sub(/^chr/,&quot;&quot;,$1)} 1&#39;</span> <span class="kw">|</span> <span class="fu">tr</span> <span class="st">&#39; &#39;</span> <span class="st">&#39;\t&#39;</span> <span class="op">&gt;</span> hg19.introns.cleaned.bed</span></code></pre></div>
 <div class="sourceCode" id="cb131"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb131-1"><a href="#cb131-1" aria-hidden="true" tabindex="-1"></a>hg19.introns <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&#39;hg19.introns.cleaned.bed&#39;</span>)</span>
