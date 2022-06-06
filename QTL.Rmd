@@ -715,11 +715,11 @@ write.table(hg19.exons, 'hg19.exons.geneid.bed', quote = FALSE, row.names = FALS
 ```
 
 ```{bash, eval=F, echo=T}
-#Merge bedfile
+#Merge bed file to remove overlaps
 > hg19.exons.merged.bed
-cut -f 4 hg19.exons.geneid.sorted.bed | uniq | while read C
+cut -f 4 hg19.exons.geneid.bed | while read C
 do
-     awk -v C=${C} '($4==C)' hg19.exons.geneid.sorted.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.exons.merged.bed
+     awk -v C=${C} '($4==C)' hg19.exons.geneid.bed | sort -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.exons.merged.bed
 done
 
 
@@ -840,6 +840,12 @@ write.table(hg19.introns, 'hg19.introns.geneid.bed', quote = FALSE, row.names = 
 ```
 
 ```{bash, eval=F, echo=T}
+#Merge bed file to remove overlaps
+> hg19.introns.merged.bed
+cut -f 4 hg19.introns.geneid.bed | while read C
+do
+     awk -v C=${C} '($4==C)' hg19.introns.geneid.bed | sort -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.introns.merged.bed
+done
 #Split into teQTL and non-teQTL
 grep -f teqtl.fdr10.names introns.uniq.sorted.bed > teqtl.fdr10.introns.bed
 grep -f non.teqtl.fdr10.names introns.uniq.sorted.bed > non.teqtl.fdr10.introns.bed
