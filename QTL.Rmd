@@ -716,9 +716,10 @@ write.table(hg19.exons, 'hg19.exons.geneid.bed', quote = FALSE, row.names = FALS
 
 ```{bash, eval=F, echo=T}
 #Merge bedfile
-cut -f 4 input.bed | sort | uniq | while read C
+> hg19.exons.merged.bed
+cut -f 4 hg19.exons.geneid.sorted.bed | uniq | while read C
 do
-     awk -v C=${C} '($4==C)' input.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge >> result.bed
+     awk -v C=${C} '($4==C)' hg19.exons.geneid.sorted.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge >> hg19.exons.merged.bed
 done
 
 
