@@ -1,0 +1,276 @@
+---
+title: "teQTL Update"
+output:
+  html_document: 
+    css: style.css
+    df_print: kable
+    highlight: kate
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'update.html')) })
+---
+
+```{r, echo=F, results='hide', warning=F, message=F}
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+setwd('~/Documents/QTL')
+```
+
+I divided the data into teQTL and non-teQTL based on either 0.10, 0.05, or 0.01 FDR cutoffs and anchored at the gene. I'll be using FDR<0.05 below.   
+
+# Kozak
+For Kozak, I worked from the gencode GTF file
+
+```{bash, eval=F, echo=T}
+# Extract columns for chromosome, start codon position, gene id, and strand direction 
+cat gencode.v19.annotation.gtf | grep "start_codon" | awk -vOFS="\t" '{sub(/.*"/,"",$9);print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | tr ' ' '\t' > gencode.v19.start.codons.bed 
+```
+
+### teQTL at FDR<0.05
+```{bash, eval=F, echo=T}
+# Get teQTL gene ids  
+awk '$5 <= 0.05' cis.teQTL.mapping.permutation.pass.results.table > teqtl.fdr05.table  
+cat teqtl.fdr05.table | awk '{print $1}' > teqtl.fdr05.names  
+# Extract teQTL genes  
+grep -f teqtl.fdr05.names gencode.v19.start.codons.bed > teqtl.fdr05.selected.bed  
+# Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' teqtl.fdr05.selected.bed > teqtl.fdr05.selected.start.codons.bed  
+```
+
+```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.1'}
+teqtl05bed = read.table('teqtl.fdr05.selected.start.codons.bed')
+colnames(teqtl05bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+# Designate Kozak region as -9 to +6 of start codon
+# 9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+teqtl05bed$chromStart <- ifelse(teqtl05bed$strand == '+', teqtl05bed$chromStart - 9, teqtl05bed$chromStart - 6)
+teqtl05bed$chromEnd <- ifelse(teqtl05bed$strand == '+', teqtl05bed$chromEnd + 6, teqtl05bed$chromEnd + 9)
+# Remove chr from chromosome number column
+teqtl05bed$chrom <- gsub('^chr', '', teqtl05bed$chrom)
+write.table(teqtl05bed, 'teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Non-teQTL at FDR<0.1
+```{bash, eval=F, echo=T}
+# Get non-teQTL gene ids  
+awk '$5 >0.05' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > non.teqtl.fdr05.table  
+cat non.teqtl.fdr05.table | awk '{print $1}' > non.teqtl.fdr05.names  
+# Extract non-teQTL gene ids  
+grep -f non.teqtl.fdr05.names gencode.v19.start.codons.bed > non.teqtl.fdr05.selected.bed  
+# Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' non.teqtl.fdr05.selected.bed > non.teqtl.fdr05.selected.start.codons.bed  
+```
+
+```{r 'Generate bed file of Kozak regions for non-teQTL genes FDR <0.1'}
+nonteqtl05bed = read.table('non.teqtl.fdr05.selected.start.codons.bed')
+colnames(nonteqtl05bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+# Designate Kozak region as -9 to +6 of start codon
+# 9 before start position to 6 after start position if strand is +; 6 before start position to 9 after start position if strand is -
+nonteqtl05bed$chromStart <- ifelse(nonteqtl05bed$strand == '+', nonteqtl05bed$chromStart - 9, nonteqtl05bed$chromStart - 6)
+nonteqtl05bed$chromEnd <- ifelse(nonteqtl05bed$strand == '+', nonteqtl05bed$chromEnd + 6, nonteqtl05bed$chromEnd + 9)
+# Remove chr from chromosome number column
+nonteqtl05bed$chrom <- gsub('^chr', '', nonteqtl05bed$chrom)
+write.table(nonteqtl05bed, 'non.teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Intersect SNPs with Kozak regions
+```{bash, eval=F, echo=T}
+# Clean up duplicates  
+cat teqtl.fdr05.kozak.bed | uniq > teqtl.fdr05.kozak.uniq.bed   
+cat non.teqtl.fdr05.kozak.bed | uniq > non.teqtl.fdr05.kozak.uniq.bed  
+
+# Intersect SNPs with Kozak regions  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr05.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.nohead.vcf.gz  
+
+# Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
+echo No_SNPs > results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < teqtl.fdr05.names) - $(zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
+echo SNPs >> results.fdr05  
+zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+
+paste - - - < results.fdr05 > results.fdr05.tab  
+```
+
+And we get the results below:
+```{r 'Fisher\'s exact test and mosaic plot of results for FDR <0.05'}
+results.fdr05 <- read.table('results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(results.fdr05) <- results.fdr05[,1]
+results.fdr05 <- results.fdr05[,-1]
+names(results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+```
+
+An issue arises from anchoring at the gene. 
+Because of the short length of the Kozak region, there were not many duplicate hits when intersecting with SNPs.  
+However, you can see there are still some duplicates.
+```{bash}
+zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
+```
+
+There are some genes with multiple hits in the Kozak region. This becomes much more apparent later on when the target region is very large such as in exons and introns where there are many hits per gene. 
+
+# Exons
+Exon coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
+```{bash, eval=F, echo=T}
+# Clean up bed file from UCSC table browser
+cat hg19.exons.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.exons.cleaned.bed
+```
+
+### Convert transcript IDs to gene IDs to match with our QTL mapping data
+```{r}
+hg19.exons <- read.table('hg19.exons.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.exons) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.exons <- hg19.exons %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.exons) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.exons, 'hg19.exons.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Merge, split, and intersect bed files with SNPs
+```{bash, eval=F, echo=T}
+# Merge bed file to remove overlaps
+grep -f all.names hg19.exons.geneid.bed > all.selected.exons.bed
+> all.selected.exons.merged.bed
+cut -f 4 all.selected.exons.bed | sort | uniq | while read C
+do
+     awk -v C=${C} '($4==C)' all.selected.exons.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.exons.merged.bed
+done
+
+# Split into teQTL and non-teQTL
+grep -f non.teqtl.fdr05.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.exons.bed
+grep -f teqtl.fdr05.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.exons.bed
+
+# Intsersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.exons.bed -wa -wb | bgzip > teqtl.fdr05.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.exons.results.vcf.gz
+```
+
+Here we see the issue more prevalently:
+```{bash}
+zcat teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
+```
+
+As a workaround, I considered a binary output of hit or no hit and kept a count of hits per gene to be used in a parallel analysis. 
+
+```{bash, eval=F, echo=T}
+# Extract hits
+zcat teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > teqtl.fdr05.exons.results.genes.counted
+zcat non.teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > non.teqtl.fdr05.exons.results.genes.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.exons.results.genes.counted) >> exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.exons.results.genes.counted) >> exons.results.fdr05  
+echo SNPs >> exons.results.fdr05  
+wc -l < non.teqtl.fdr05.exons.results.genes.counted >> exons.results.fdr05  
+wc -l < teqtl.fdr05.exons.results.genes.counted >> exons.results.fdr05  
+
+paste - - - < exons.results.fdr05 > exons.results.fdr05.tab  
+```
+
+Here are the results: 
+```{r}
+fdr05.exons <- read.table('exons.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(fdr05.exons) <- fdr05.exons[,1]
+fdr05.exons <- fdr05.exons[,-1]
+names(fdr05.exons) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(fdr05.exons),full_width = F)
+# Fisher's exact test
+fisher.test(fdr05.exons)
+# Mosaic plot of contingency table
+mosaicplot(fdr05.exons, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+```
+
+```{bash}
+cat teqtl.fdr05.exons.results.genes.counted | head
+```
+
+# Introns
+Intron coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
+```{bash, eval=F, echo=T}
+# Clean up bed file from UCSC table browser
+cat hg19.introns.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.introns.cleaned.bed
+```
+
+### Convert transcript IDs to gene IDs to match with our QTL mapping data
+```{r}
+hg19.introns <- read.table('hg19.introns.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.introns) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.introns <- hg19.introns %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.introns) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.introns, 'hg19.introns.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Merge, split, and intersect bed files with SNPs
+```{bash, eval=F, echo=T}
+# Merge bed file to remove overlaps
+grep -f all.names hg19.introns.geneid.bed > all.selected.introns.bed
+> all.selected.introns.merged.bed
+cut -f 4 all.selected.introns.bed | sort | uniq | while read C
+do
+     awk -v C=${C} '($4==C)' all.selected.introns.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.introns.merged.bed
+done
+
+# Split into teQTL and non-teQTL
+grep -f non.teqtl.fdr05.names all.selected.introns.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.introns.bed
+grep -f teqtl.fdr05.names all.selected.introns.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.introns.bed
+
+# Remove exons
+grep -vf teqtl.fdr05.exons.bed teqtl.fdr05.introns.bed > teqtl.fdr05.introns.exclude.exons.bed
+grep -vf non.teqtl.fdr05.exons.bed non.teqtl.fdr05.introns.bed > non.teqtl.fdr05.introns.exclude.exons.bed
+
+# Intsersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.introns.exclude.exons.bed -wa -wb | bgzip > teqtl.fdr05.introns.exclude.exons.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.introns.exclude.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz
+
+# Extract hits
+zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr05.introns.exclude.exons.results.genes.counted
+zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr05.introns.exclude.exons.results.genes.counted
+
+# Create contingency table for teQTL and non-teQTL genes 
+echo No_SNPs > introns.exclude.exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr05  
+echo SNPs >> introns.exclude.exons.results.fdr05  
+wc -l < non.teqtl.fdr05.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr05  
+wc -l < teqtl.fdr05.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr05  
+
+paste - - - < introns.exclude.exons.results.fdr05 > introns.exclude.exons.results.fdr05.tab  
+```
+
+```{r}
+fdr05.introns <- read.table('introns.exclude.exons.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(fdr05.introns) <- fdr05.introns[,1]
+fdr05.introns <- fdr05.introns[,-1]
+names(fdr05.introns) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(fdr05.introns),full_width = F)
+# Fisher's exact test
+fisher.test(fdr05.introns)
+# Mosaic plot of contingency table
+mosaicplot(fdr05.introns, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+```

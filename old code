@@ -1,0 +1,125 @@
+# > hg19.exons.merged.bed
+# cut -f 4 hg19.exons.geneid.bed | sort | uniq | while read C
+# do
+# awk -v C=${C} '($4==C)' hg19.exons.geneid.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.exons.merged.bed
+# done
+
+# Create contingency table for teQTL and non-teQTL genes  
+# echo No_SNPs > exons.results.fdr10  
+# expr $(wc -l < non.teqtl.fdr10.exons.bed) - $(zcat non.teqtl.fdr10.exons.results.vcf.gz | wc -l) >> exons.results.fdr10 
+# expr $(wc -l < teqtl.fdr10.exons.bed) - $(zcat teqtl.fdr10.exons.results.vcf.gz | wc -l) >> exons.results.fdr10  
+# echo SNPs >> exons.results.fdr10  
+# zcat non.teqtl.fdr10.exons.results.vcf.gz | wc -l >> exons.results.fdr10  
+# zcat teqtl.fdr10.exons.results.vcf.gz | wc -l >> exons.results.fdr10  
+
+# paste - - - < exons.results.fdr10 > exons.results.fdr10.tab  
+
+# echo No_SNPs > exons.results.fdr05  
+# expr $(wc -l < non.teqtl.fdr05.exons.bed) - $(zcat non.teqtl.fdr05.exons.results.vcf.gz | wc -l) >> exons.results.fdr05 
+# expr $(wc -l < teqtl.fdr05.exons.bed) - $(zcat teqtl.fdr05.exons.results.vcf.gz | wc -l) >> exons.results.fdr05  
+# echo SNPs >> exons.results.fdr05  
+# zcat non.teqtl.fdr05.exons.results.vcf.gz | wc -l >> exons.results.fdr05  
+# zcat teqtl.fdr05.exons.results.vcf.gz | wc -l >> exons.results.fdr05  
+
+# paste - - - < exons.results.fdr05 > exons.results.fdr05.tab  
+
+# echo No_SNPs > exons.results.fdr01  
+# expr $(wc -l < non.teqtl.fdr01.exons.bed) - $(zcat non.teqtl.fdr01.exons.results.vcf.gz | wc -l) >> exons.results.fdr01 
+# expr $(wc -l < teqtl.fdr01.exons.bed) - $(zcat teqtl.fdr01.exons.results.vcf.gz | wc -l) >> exons.results.fdr01  
+# echo SNPs >> exons.results.fdr01  
+# zcat non.teqtl.fdr01.exons.results.vcf.gz | wc -l >> exons.results.fdr01  
+# zcat teqtl.fdr01.exons.results.vcf.gz | wc -l >> exons.results.fdr01  
+
+# paste - - - < exons.results.fdr01 > exons.results.fdr01.tab  
+
+
+# > hg19.introns.merged.bed
+# cut -f 4 hg19.introns.geneid.bed | while read C
+# do
+# awk -v C=${C} '($4==C)' hg19.introns.geneid.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.introns.merged.bed
+# done
+
+# Create contingency table for teQTL and non-teQTL genes
+echo No_SNPs > introns.results.fdr10
+expr $(wc -l < non.teqtl.fdr10.names) - $(wc -l < non.teqtl.fdr10.introns.results.genes.counted) >> introns.results.fdr10
+expr $(wc -l < teqtl.fdr10.names) - $(wc -l < teqtl.fdr10.introns.results.genes.counted) >> introns.results.fdr10
+echo SNPs >> introns.results.fdr10
+wc -l < non.teqtl.fdr10.introns.results.genes.counted >> introns.results.fdr10
+wc -l < teqtl.fdr10.introns.results.genes.counted >> introns.results.fdr10
+
+paste - - - < introns.results.fdr10 > introns.results.fdr10.tab
+
+echo No_SNPs > introns.results.fdr05
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.introns.results.genes.counted) >> introns.results.fdr05
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.introns.results.genes.counted) >> introns.results.fdr05
+echo SNPs >> introns.results.fdr05
+wc -l < non.teqtl.fdr05.introns.results.genes.counted >> introns.results.fdr05
+wc -l < teqtl.fdr05.introns.results.genes.counted >> introns.results.fdr05
+
+paste - - - < introns.results.fdr05 > introns.results.fdr05.tab
+
+echo No_SNPs > introns.results.fdr01
+expr $(wc -l < non.teqtl.fdr01.names) - $(wc -l < non.teqtl.fdr01.introns.results.genes.counted) >> introns.results.fdr01
+expr $(wc -l < teqtl.fdr01.names) - $(wc -l < teqtl.fdr01.introns.results.genes.counted) >> introns.results.fdr01
+echo SNPs >> introns.results.fdr01
+wc -l < non.teqtl.fdr01.introns.results.genes.counted >> introns.results.fdr01
+wc -l < teqtl.fdr01.introns.results.genes.counted >> introns.results.fdr01
+
+paste - - - < introns.results.fdr01 > introns.results.fdr01.tab
+
+
+# Create contingency table for teQTL and non-teQTL genes with exons excluded
+echo No_SNPs > introns.exclude.exons.results.fdr10
+expr $(wc -l < non.teqtl.fdr10.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr10
+expr $(wc -l < teqtl.fdr10.introns.exclude.exons.bed) - $(zcat teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr10
+echo SNPs >> introns.exclude.exons.results.fdr10
+zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr10
+zcat teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr10
+
+paste - - - < introns.exclude.exons.results.fdr10 > introns.exclude.exons.results.fdr10.tab
+
+echo No_SNPs > introns.exclude.exons.results.fdr05
+expr $(wc -l < non.teqtl.fdr05.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr05
+expr $(wc -l < teqtl.fdr05.introns.exclude.exons.bed) - $(zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr05
+echo SNPs >> introns.exclude.exons.results.fdr05
+zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr05
+zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr05
+
+paste - - - < introns.exclude.exons.results.fdr05 > introns.exclude.exons.results.fdr05.tab
+
+echo No_SNPs > introns.exclude.exons.results.fdr01
+expr $(wc -l < non.teqtl.fdr01.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr01
+expr $(wc -l < teqtl.fdr01.introns.exclude.exons.bed) - $(zcat teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr01
+echo SNPs >> introns.exclude.exons.results.fdr01
+zcat non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr01
+zcat teqtl.fdr01.introns.exclude.exons.results.vcf.gz | wc -l >> introns.exclude.exons.results.fdr01
+
+paste - - - < introns.exclude.exons.results.fdr01 > introns.exclude.exons.results.fdr01.tab
+
+# Create contingency table for teQTL and non-teQTL genes with exons included
+echo No_SNPs > introns.results.fdr10
+expr $(wc -l < non.teqtl.fdr10.introns.bed) - $(zcat non.teqtl.fdr10.introns.results.vcf.gz | wc -l) >> introns.results.fdr10
+expr $(wc -l < teqtl.fdr10.introns.bed) - $(zcat teqtl.fdr10.introns.results.vcf.gz | wc -l) >> introns.results.fdr10
+echo SNPs >> introns.results.fdr10
+zcat non.teqtl.fdr10.introns.results.vcf.gz | wc -l >> introns.results.fdr10
+zcat teqtl.fdr10.introns.results.vcf.gz | wc -l >> introns.results.fdr10
+
+paste - - - < introns.results.fdr10 > introns.results.fdr10.tab
+
+echo No_SNPs > introns.results.fdr05
+expr $(wc -l < non.teqtl.fdr05.introns.bed) - $(zcat non.teqtl.fdr05.introns.results.vcf.gz | wc -l) >> introns.results.fdr05
+expr $(wc -l < teqtl.fdr05.introns.bed) - $(zcat teqtl.fdr05.introns.results.vcf.gz | wc -l) >> introns.results.fdr05
+echo SNPs >> introns.results.fdr05
+zcat non.teqtl.fdr05.introns.results.vcf.gz | wc -l >> introns.results.fdr05
+zcat teqtl.fdr05.introns.results.vcf.gz | wc -l >> introns.results.fdr05
+
+paste - - - < introns.results.fdr05 > introns.results.fdr05.tab
+
+echo No_SNPs > introns.results.fdr01
+expr $(wc -l < non.teqtl.fdr01.introns.bed) - $(zcat non.teqtl.fdr01.introns.results.vcf.gz | wc -l) >> introns.results.fdr01
+expr $(wc -l < teqtl.fdr01.introns.bed) - $(zcat teqtl.fdr01.introns.results.vcf.gz | wc -l) >> introns.results.fdr01
+echo SNPs >> introns.results.fdr01
+zcat non.teqtl.fdr01.introns.results.vcf.gz | wc -l >> introns.results.fdr01
+zcat teqtl.fdr01.introns.results.vcf.gz | wc -l >> introns.results.fdr01
+
+paste - - - < introns.results.fdr01 > introns.results.fdr01.tab
