@@ -716,11 +716,17 @@ write.table(hg19.exons, 'hg19.exons.geneid.bed', quote = FALSE, row.names = FALS
 
 ```{bash, eval=F, echo=T}
 #Merge bed file to remove overlaps
-> hg19.exons.merged.bed
-cut -f 4 hg19.exons.geneid.bed | while read C
+grep -f all.names hg19.exons.geneid.bed > all.selected.exons.bed
+> all.selected.exons.merged.bed
+cut -f 4 all.selected.exons.bed | sort | uniq | while read C
 do
-     awk -v C=${C} '($4==C)' hg19.exons.geneid.bed | sort -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.exons.merged.bed
+     awk -v C=${C} '($4==C)' all.selected.exons.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.exons.merged.bed
 done
+#> hg19.exons.merged.bed
+#cut -f 4 hg19.exons.geneid.bed | sort | uniq | while read C
+#do
+#     awk -v C=${C} '($4==C)' hg19.exons.geneid.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.exons.merged.bed
+#done
 
 
 #Split into teQTL and non-teQTL
@@ -730,6 +736,14 @@ grep -f non.teqtl.fdr05.names hg19.exons.geneid.sorted.bed > non.teqtl.fdr05.exo
 grep -f non.teqtl.fdr01.names hg19.exons.geneid.sorted.bed > non.teqtl.fdr01.exons.bed
 grep -f teqtl.fdr05.names hg19.exons.geneid.sorted.bed > teqtl.fdr05.exons.bed
 grep -f teqtl.fdr01.names hg19.exons.geneid.sorted.bed > teqtl.fdr01.exons.bed
+
+grep -f non.teqtl.fdr10.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr10.exons.bed
+grep -f teqtl.fdr10.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr10.exons.bed
+grep -f non.teqtl.fdr05.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.exons.bed
+grep -f teqtl.fdr05.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.exons.bed
+grep -f non.teqtl.fdr01.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr01.exons.bed
+grep -f teqtl.fdr01.names all.selected.exons.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr01.exons.bed
+
 #Intsersect with SNPs
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.exons.bed -wa -wb | bgzip > teqtl.fdr10.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.exons.bed -wa -wb | bgzip > non.teqtl.fdr10.exons.results.vcf.gz
@@ -737,6 +751,44 @@ bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz 
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.exons.bed -wa -wb | bgzip > non.teqtl.fdr05.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.exons.bed -wa -wb | bgzip > teqtl.fdr01.exons.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.exons.bed -wa -wb | bgzip > non.teqtl.fdr01.exons.results.vcf.gz
+
+
+zcat teqtl.fdr10.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr10.exons.results.genes.counted
+zcat non.teqtl.fdr10.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr10.exons.results.genes.counted
+zcat teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr05.exons.results.genes.counted
+zcat non.teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr05.exons.results.genes.counted
+zcat teqtl.fdr01.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr01.exons.results.genes.counted
+zcat non.teqtl.fdr01.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr01.exons.results.genes.counted
+
+#Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > exons.results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.names) - $(wc -l < non.teqtl.fdr10.exons.results.genes.counted) >> exons.results.fdr10 
+expr $(wc -l < teqtl.fdr10.names) - $(wc -l < teqtl.fdr10.exons.results.genes.counted) >> exons.results.fdr10  
+echo SNPs >> exons.results.fdr10  
+wc -l < non.teqtl.fdr10.exons.results.genes.counted >> exons.results.fdr10  
+wc -l < teqtl.fdr10.exons.results.genes.counted >> exons.results.fdr10  
+
+paste - - - < exons.results.fdr10 > exons.results.fdr10.tab  
+
+echo No_SNPs > exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.exons.results.genes.counted) >> exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.exons.results.genes.counted) >> exons.results.fdr05  
+echo SNPs >> exons.results.fdr05  
+wc -l < non.teqtl.fdr05.exons.results.genes.counted >> exons.results.fdr05  
+wc -l < teqtl.fdr05.exons.results.genes.counted >> exons.results.fdr05  
+
+paste - - - < exons.results.fdr05 > exons.results.fdr05.tab  
+
+echo No_SNPs > exons.results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.names) - $(wc -l < non.teqtl.fdr01.exons.results.genes.counted) >> exons.results.fdr01 
+expr $(wc -l < teqtl.fdr01.names) - $(wc -l < teqtl.fdr01.exons.results.genes.counted) >> exons.results.fdr01  
+echo SNPs >> exons.results.fdr01  
+wc -l < non.teqtl.fdr01.exons.results.genes.counted >> exons.results.fdr01  
+wc -l < teqtl.fdr01.exons.results.genes.counted >> exons.results.fdr01  
+
+paste - - - < exons.results.fdr01 > exons.results.fdr01.tab    
+
+
 #Create contingency table for teQTL and non-teQTL genes  
 echo No_SNPs > exons.results.fdr10  
 expr $(wc -l < non.teqtl.fdr10.exons.bed) - $(zcat non.teqtl.fdr10.exons.results.vcf.gz | wc -l) >> exons.results.fdr10 
@@ -841,18 +893,26 @@ write.table(hg19.introns, 'hg19.introns.geneid.bed', quote = FALSE, row.names = 
 
 ```{bash, eval=F, echo=T}
 #Merge bed file to remove overlaps
-> hg19.introns.merged.bed
-cut -f 4 hg19.introns.geneid.bed | while read C
+grep -f all.names hg19.introns.geneid.bed > all.selected.introns.bed
+> all.selected.introns.merged.bed
+cut -f 4 all.selected.introns.bed | sort | uniq | while read C
 do
-     awk -v C=${C} '($4==C)' hg19.introns.geneid.bed | sort -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.introns.merged.bed
+     awk -v C=${C} '($4==C)' all.selected.introns.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.introns.merged.bed
 done
+
+#> hg19.introns.merged.bed
+#cut -f 4 hg19.introns.geneid.bed | while read C
+#do
+#     awk -v C=${C} '($4==C)' hg19.introns.geneid.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> hg19.introns.merged.bed
+#done
+
 #Split into teQTL and non-teQTL
-grep -f teqtl.fdr10.names introns.uniq.sorted.bed > teqtl.fdr10.introns.bed
-grep -f non.teqtl.fdr10.names introns.uniq.sorted.bed > non.teqtl.fdr10.introns.bed
-grep -f non.teqtl.fdr05.names introns.uniq.sorted.bed > non.teqtl.fdr05.introns.bed
-grep -f non.teqtl.fdr01.names introns.uniq.sorted.bed > non.teqtl.fdr01.introns.bed
-grep -f teqtl.fdr05.names introns.uniq.sorted.bed > teqtl.fdr05.introns.bed
-grep -f teqtl.fdr01.names introns.uniq.sorted.bed > teqtl.fdr01.introns.bed
+grep -f teqtl.fdr10.names all.selected.introns.merged.bed > teqtl.fdr10.introns.bed
+grep -f non.teqtl.fdr10.names all.selected.introns.merged.bed > non.teqtl.fdr10.introns.bed
+grep -f non.teqtl.fdr05.names all.selected.introns.merged.bed > non.teqtl.fdr05.introns.bed
+grep -f non.teqtl.fdr01.names all.selected.introns.merged.bed > non.teqtl.fdr01.introns.bed
+grep -f teqtl.fdr05.names all.selected.introns.merged.bed > teqtl.fdr05.introns.bed
+grep -f teqtl.fdr01.names all.selected.introns.merged.bed > teqtl.fdr01.introns.bed
 #Remove exons
 grep -vf teqtl.fdr10.exons.bed teqtl.fdr10.introns.bed > teqtl.fdr10.introns.exclude.exons.bed
 grep -vf non.teqtl.fdr10.exons.bed non.teqtl.fdr10.introns.bed > non.teqtl.fdr10.introns.exclude.exons.bed
@@ -874,6 +934,79 @@ bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz 
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.introns.bed -wa -wb | bgzip > non.teqtl.fdr05.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.introns.bed -wa -wb | bgzip > teqtl.fdr01.introns.results.vcf.gz
 bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.introns.bed -wa -wb | bgzip > non.teqtl.fdr01.introns.results.vcf.gz
+
+zcat teqtl.fdr10.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr10.introns.exclude.exons.results.genes.counted
+zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr10.introns.exclude.exons.results.genes.counted
+zcat teqtl.fdr05.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr05.introns.exclude.exons.results.genes.counted
+zcat non.teqtl.fdr05.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr05.introns.exclude.exons.results.genes.counted
+zcat teqtl.fdr01.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr01.introns.exclude.exons.results.genes.counted
+zcat non.teqtl.fdr01.introns.exclude.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr01.introns.exclude.exons.results.genes.counted
+
+#Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > introns.exclude.exons.results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.names) - $(wc -l < non.teqtl.fdr10.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr10 
+expr $(wc -l < teqtl.fdr10.names) - $(wc -l < teqtl.fdr10.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr10  
+echo SNPs >> introns.exclude.exons.results.fdr10  
+wc -l < non.teqtl.fdr10.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr10  
+wc -l < teqtl.fdr10.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr10  
+
+paste - - - < introns.exclude.exons.results.fdr10 > introns.exclude.exons.results.fdr10.tab  
+
+echo No_SNPs > introns.exclude.exons.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr05  
+echo SNPs >> introns.exclude.exons.results.fdr05  
+wc -l < non.teqtl.fdr05.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr05  
+wc -l < teqtl.fdr05.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr05  
+
+paste - - - < introns.exclude.exons.results.fdr05 > introns.exclude.exons.results.fdr05.tab  
+
+echo No_SNPs > introns.exclude.exons.results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.names) - $(wc -l < non.teqtl.fdr01.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr01 
+expr $(wc -l < teqtl.fdr01.names) - $(wc -l < teqtl.fdr01.introns.exclude.exons.results.genes.counted) >> introns.exclude.exons.results.fdr01  
+echo SNPs >> introns.exclude.exons.results.fdr01  
+wc -l < non.teqtl.fdr01.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr01  
+wc -l < teqtl.fdr01.introns.exclude.exons.results.genes.counted >> introns.exclude.exons.results.fdr01  
+
+paste - - - < introns.exclude.exons.results.fdr01 > introns.exclude.exons.results.fdr01.tab    
+
+
+zcat teqtl.fdr10.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr10.introns.results.genes.counted
+zcat non.teqtl.fdr10.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr10.introns.results.genes.counted
+zcat teqtl.fdr05.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr05.introns.results.genes.counted
+zcat non.teqtl.fdr05.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr05.introns.results.genes.counted
+zcat teqtl.fdr01.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > teqtl.fdr01.introns.results.genes.counted
+zcat non.teqtl.fdr01.introns.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq > non.teqtl.fdr01.introns.results.genes.counted
+
+#Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > introns.results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.names) - $(wc -l < non.teqtl.fdr10.introns.results.genes.counted) >> introns.results.fdr10 
+expr $(wc -l < teqtl.fdr10.names) - $(wc -l < teqtl.fdr10.introns.results.genes.counted) >> introns.results.fdr10  
+echo SNPs >> introns.results.fdr10  
+wc -l < non.teqtl.fdr10.introns.results.genes.counted >> introns.results.fdr10  
+wc -l < teqtl.fdr10.introns.results.genes.counted >> introns.results.fdr10  
+
+paste - - - < introns.results.fdr10 > introns.results.fdr10.tab  
+
+echo No_SNPs > introns.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.introns.results.genes.counted) >> introns.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.introns.results.genes.counted) >> introns.results.fdr05  
+echo SNPs >> introns.results.fdr05  
+wc -l < non.teqtl.fdr05.introns.results.genes.counted >> introns.results.fdr05  
+wc -l < teqtl.fdr05.introns.results.genes.counted >> introns.results.fdr05  
+
+paste - - - < introns.results.fdr05 > introns.results.fdr05.tab  
+
+echo No_SNPs > introns.results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.names) - $(wc -l < non.teqtl.fdr01.introns.results.genes.counted) >> introns.results.fdr01 
+expr $(wc -l < teqtl.fdr01.names) - $(wc -l < teqtl.fdr01.introns.results.genes.counted) >> introns.results.fdr01  
+echo SNPs >> introns.results.fdr01  
+wc -l < non.teqtl.fdr01.introns.results.genes.counted >> introns.results.fdr01  
+wc -l < teqtl.fdr01.introns.results.genes.counted >> introns.results.fdr01  
+
+paste - - - < introns.results.fdr01 > introns.results.fdr01.tab    
+
+
 #Create contingency table for teQTL and non-teQTL genes with exons excluded
 echo No_SNPs > introns.exclude.exons.results.fdr10  
 expr $(wc -l < non.teqtl.fdr10.introns.exclude.exons.bed) - $(zcat non.teqtl.fdr10.introns.exclude.exons.results.vcf.gz | wc -l) >> introns.exclude.exons.results.fdr10 
