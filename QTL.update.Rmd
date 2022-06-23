@@ -2,7 +2,6 @@
 title: "teQTL Update"
 output:
   html_document: 
-    css: style.css
     df_print: kable
     highlight: kate
 knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'update.html')) })
@@ -16,7 +15,7 @@ library(tidyverse)
 setwd('~/Documents/QTL')
 ```
 
-I divided the data into teQTL and non-teQTL based on either 0.10, 0.05, or 0.01 FDR cutoffs and anchored at the gene. I'll be using FDR<0.05 below.   
+I divided the data into teQTL and non-teQTL based on either 0.10, 0.05, or 0.01 FDR cutoffs and anchored at the gene. I'll be using FDR≤0.05 below.   
 
 # Kozak
 For Kozak, I worked from the gencode GTF file
@@ -26,7 +25,7 @@ For Kozak, I worked from the gencode GTF file
 cat gencode.v19.annotation.gtf | grep "start_codon" | awk -vOFS="\t" '{sub(/.*"/,"",$9);print $1, $4, $5, $10, $8, $7}' | awk '{gsub(/"|;/,"",$4)}1' | tr ' ' '\t' > gencode.v19.start.codons.bed 
 ```
 
-### teQTL at FDR<0.05
+### teQTL at FDR≤0.05
 ```{bash, eval=F, echo=T}
 # Get teQTL gene ids  
 awk '$5 <= 0.05' cis.teQTL.mapping.permutation.pass.results.table > teqtl.fdr05.table  
@@ -37,7 +36,7 @@ grep -f teqtl.fdr05.names gencode.v19.start.codons.bed > teqtl.fdr05.selected.be
 awk '{sub(/\..*/,"",$4)} 1' teqtl.fdr05.selected.bed > teqtl.fdr05.selected.start.codons.bed  
 ```
 
-```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.1'}
+```{r 'Generate bed file of Kozak regions for teQTL genes FDR <0.05'}
 teqtl05bed = read.table('teqtl.fdr05.selected.start.codons.bed')
 colnames(teqtl05bed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
 # Designate Kozak region as -9 to +6 of start codon
@@ -49,7 +48,7 @@ teqtl05bed$chrom <- gsub('^chr', '', teqtl05bed$chrom)
 write.table(teqtl05bed, 'teqtl.fdr05.kozak.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
 
-### Non-teQTL at FDR<0.1
+### Non-teQTL at FDR≤0.05
 ```{bash, eval=F, echo=T}
 # Get non-teQTL gene ids  
 awk '$5 >0.05' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > non.teqtl.fdr05.table  
@@ -105,7 +104,7 @@ kable_classic(kbl(results.fdr05),full_width = F)
 # Fisher's exact test
 fisher.test(results.fdr05)
 # Mosaic plot of contingency table
-mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+mosaicplot(results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
 ```
 
 An issue arises from anchoring at the gene. 
@@ -115,7 +114,97 @@ However, you can see there are still some duplicates.
 zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
 ```
 
-There are some genes with multiple hits in the Kozak region. This becomes much more apparent later on when the target region is very large such as in exons and introns where there are many hits per gene. 
+There are some genes with multiple hits in the Kozak region. This was actually an issue with the miRNA targets as well but I actually just didn't notice it. This becomes much more apparent later on when the target region is very large such as in exons and introns where there are many hits per gene. 
+
+# miRNA targets
+```{bash, eval=F, echo=T}
+# Generate bed file of all genes transcription start and end sites from UCSC genome browser
+mysql --user=genome -N --host=genome-mysql.cse.ucsc.edu -A -D hg19 -e "select ensGene.chrom, txStart, txEnd, name2, score, strand value from ensGene, ensemblToGeneName where ensGene.name = ensemblToGeneName.name" | awk '{gsub(/chr/,"", $1); print }' | awk -v OFS='\t' '{$1=$1}1' > hg19.txStart.txEnd.bed
+# Subset for selected genes
+grep -f all.names hg19.txStart.txEnd.bed > selected.txStart.txEnd.bed 
+```
+
+### Generate bed file with transcription start and end sites of all selected genes
+```{r}
+# Generate bed file with transcription start and end sites of all selected genes
+selected.txSE <- read.table('selected.txStart.txEnd.bed')
+names(selected.txSE) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+tempMin <- selected.txSE[order(selected.txSE$name, selected.txSE$chromStart),]
+tempMin <- selected.txSE[!duplicated(selected.txSE$name),]
+tempMax <- selected.txSE[order(selected.txSE$name, -selected.txSE$chromEnd),]
+tempMax <- selected.txSE[!duplicated(selected.txSE$name),]
+selected.txSE.merged <- tempMin
+selected.txSE.merged$chromEnd <- tempMax$chromEnd
+write.table(selected.txSE.merged, 'selected.txStart.txEnd.filtered.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Clean up annotation file headers
+```{bash, eval=F, echo=T}
+# Clean up annotation file headers
+awk '{gsub(" ", "_");print}' mart_export_human_miRNA_target_GRCh37.p13.txt > mart_export_human_miRNA_target_GRCh37.p13.table
+```
+
+### Assign target genes to miRNA targets
+```{r, eval=F, echo=T}
+# Assign target genes to miRNA targets
+selected.txSE.merged <- read.table('selected.txStart.txEnd.filtered.bed')
+names(selected.txSE.merged) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+miRNA <- read.table('mart_export_human_miRNA_target_GRCh37.p13.table')
+names(miRNA) <- miRNA[1,]
+miRNA <- miRNA[-1,]
+miRNA$found <- "NA"
+# Function to check if position of miRNA is in gene
+checkrange <- function(a, b){
+  any(selected.txSE.merged$chromStart ≤ a) & any(selected.txSE.merged$chromEnd >= b)
+}
+miRNA$found <- ifelse(mapply(checkrange, miRNA$`Start_(bp)`, miRNA$`End_(bp)`), selected.txSE.merged$name, NA)
+# Generate bed6 file
+miRNA$score <- 0
+miRNAbed <- miRNA[,c(1,2,3,7,8,6)]
+write.table(miRNAbed, 'miRNA.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+### Intersect SNPs with miRNA targets
+```{bash, eval=F, echo=T}
+# Sort bed file
+sort -k1,1 -k2,2n miRNA.bed > miRNA.sorted.bed
+# Split into teQTL and non-teQTL genes
+grep -f teqtl.fdr05.names miRNA.sorted.bed > miRNA.teqtl.fdr05.sorted.bed
+grep -f non.teqtl.fdr05.names miRNA.sorted.bed > miRNA.non.teqtl.fdr05.sorted.bed
+
+# Intersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.teqtl.fdr05.sorted.bed -wa -wb | bgzip > miRNA.teqtl.fdr05.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b miRNA.non.teqtl.fdr05.sorted.bed -wa -wb | bgzip > miRNA.non.teqtl.fdr05.results.vcf.gz
+
+# Create contingency table of miRNA targets for teQTL and non-teQTL genes 
+echo No_SNPs > miRNA.results.fdr05  
+expr $(wc -l < miRNA.non.teqtl.fdr05.sorted.bed) - $(zcat miRNA.non.teqtl.fdr05.results.vcf.gz | wc -l) >> miRNA.results.fdr05  
+expr $(wc -l < miRNA.teqtl.fdr05.sorted.bed) - $(zcat miRNA.teqtl.fdr05.results.vcf.gz | wc -l) >> miRNA.results.fdr05  
+echo SNPs >> miRNA.results.fdr05  
+zcat miRNA.non.teqtl.fdr05.results.vcf.gz | wc -l >> miRNA.results.fdr05   
+zcat miRNA.teqtl.fdr05.results.vcf.gz | wc -l >> miRNA.results.fdr05  
+
+paste - - - < miRNA.results.fdr05  > miRNA.results.fdr05.tab
+```
+
+```{r 'Fisher\'s exact test and mosaic plot of results for miRNA targets FDR <0.05'}
+miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
+miRNA.results.fdr05 <- miRNA.results.fdr05[,-1]
+names(miRNA.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(miRNA.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(miRNA.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targets FDR≤0.05')
+```
+  
+It doesn't seem like there is an issue until you take a look deeper at the data:
+```{bash}
+zcat miRNA.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
+```
 
 # Exons
 Exon coordinates downloaded from UCSC table browser  
@@ -164,7 +253,7 @@ Here we see the issue more prevalently:
 zcat teqtl.fdr05.exons.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
 ```
 
-As a workaround, I considered a binary output of hit or no hit and kept a count of hits per gene to be used in a parallel analysis. 
+A workaround for this could be to use a binary output of hit or no hit and then keeping a count of how many hits per gene to be used for further analysis. I have so far done this for exons, introns, 5'utr and 3'utr
 
 ```{bash, eval=F, echo=T}
 # Extract hits
@@ -194,9 +283,10 @@ kable_classic(kbl(fdr05.exons),full_width = F)
 # Fisher's exact test
 fisher.test(fdr05.exons)
 # Mosaic plot of contingency table
-mosaicplot(fdr05.exons, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+mosaicplot(fdr05.exons, col = c('lightblue','pink'), main = 'Exons FDR≤0.05')
 ```
 
+This brings us back to hits from the bedtools intersect
 ```{bash}
 cat teqtl.fdr05.exons.results.genes.counted | head
 ```
@@ -272,5 +362,210 @@ kable_classic(kbl(fdr05.introns),full_width = F)
 # Fisher's exact test
 fisher.test(fdr05.introns)
 # Mosaic plot of contingency table
-mosaicplot(fdr05.introns, col = c('lightblue','pink'), main = 'FDR <= 0.05')
+mosaicplot(fdr05.introns, col = c('lightblue','pink'), main = 'Introns FDR≤0.05')
 ```
+
+# 5' UTR
+5' UTR coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
+```{bash, eval=F, echo=T}
+# Clean up bed file from UCSC table browser
+cat hg19.5utr.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.5utr.cleaned.bed
+```
+
+### Convert transcript IDs to gene IDs to match with our QTL mapping data
+```{r}
+hg19.5utr <- read.table('hg19.5utr.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.5utr) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.5utr <- hg19.5utr %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.5utr) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.5utr, 'hg19.5utr.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+## Merge, split, and intersect bed files with SNPs
+```{bash, eval=F, echo=T}
+# Merge bed file to remove overlaps
+grep -f all.names hg19.5utr.geneid.bed > all.selected.5utr.bed
+> all.selected.5utr.merged.bed
+cut -f 4 all.selected.5utr.bed | sort | uniq | while read C
+do
+     awk -v C=${C} '($4==C)' all.selected.5utr.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.5utr.merged.bed
+done
+
+# Split into teQTL and non-teQTL
+grep -f non.teqtl.fdr05.names all.selected.5utr.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.5utr.bed
+grep -f teqtl.fdr05.names all.selected.5utr.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.5utr.bed
+
+# Intsersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.5utr.bed -wa -wb | bgzip > teqtl.fdr05.5utr.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.5utr.bed -wa -wb | bgzip > non.teqtl.fdr05.5utr.results.vcf.gz
+
+# Extract hits
+zcat teqtl.fdr05.5utr.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > teqtl.fdr05.5utr.results.genes.counted
+zcat non.teqtl.fdr05.5utr.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > non.teqtl.fdr05.5utr.results.genes.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > 5utr.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.5utr.results.genes.counted) >> 5utr.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.5utr.results.genes.counted) >> 5utr.results.fdr05  
+echo SNPs >> 5utr.results.fdr05  
+wc -l < non.teqtl.fdr05.5utr.results.genes.counted >> 5utr.results.fdr05  
+wc -l < teqtl.fdr05.5utr.results.genes.counted >> 5utr.results.fdr05  
+
+paste - - - < 5utr.results.fdr05 > 5utr.results.fdr05.tab 
+```
+
+```{r}
+fdr05.5utr <- read.table('5utr.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(fdr05.5utr) <- fdr05.5utr[,1]
+fdr05.5utr <- fdr05.5utr[,-1]
+names(fdr05.5utr) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(fdr05.5utr),full_width = F)
+# Fisher's exact test
+fisher.test(fdr05.5utr)
+# Mosaic plot of contingency table
+mosaicplot(fdr05.5utr, col = c('lightblue','pink'), main = "5' UTR FDR≤0.05")
+```
+
+# 3' UTR
+3' UTR coordinates downloaded from UCSC table browser  
+Transcript and Gene IDs from biomart GRCh37  
+```{bash, eval=F, echo=T}
+# Clean up bed file from UCSC table browser
+cat hg19.3utr.bed | awk '{sub(/\..*/,"",$4)} 1' | awk '{sub(/^chr/,"",$1)} 1' | tr ' ' '\t' > hg19.3utr.cleaned.bed
+```
+
+### Convert transcript IDs to gene IDs to match with our QTL mapping data
+```{r}
+hg19.3utr <- read.table('hg19.3utr.cleaned.bed')
+ENSG.ENST <- read.table('mart_export_ENSG_ENST.table', skip = 1)
+colnames(hg19.3utr) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+colnames(ENSG.ENST) <- c("geneid", "transid")
+hg19.3utr <- hg19.3utr %>% 
+  left_join(ENSG.ENST,  
+            by = c("name" = "transid")) %>% 
+  mutate(geneid = ifelse(is.na(geneid), name, geneid)) %>% 
+  select(name = chrom, chromStart, chromEnd, geneid, score, strand)
+colnames(hg19.3utr) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+write.table(hg19.3utr, 'hg19.3utr.geneid.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+## Merge, split, and intersect bed files with SNPs
+```{bash, eval=F, echo=T}
+# Merge bed file to remove overlaps
+grep -f all.names hg19.3utr.geneid.bed > all.selected.3utr.bed
+> all.selected.3utr.merged.bed
+cut -f 4 all.selected.3utr.bed | sort | uniq | while read C
+do
+     awk -v C=${C} '($4==C)' all.selected.3utr.bed | sort -t $'\t' -k1,1 -k2,2n | bedtools merge -c 4,5,6 -o distinct -s >> all.selected.3utr.merged.bed
+done
+
+# Split into teQTL and non-teQTL
+grep -f non.teqtl.fdr05.names all.selected.3utr.merged.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.3utr.bed
+grep -f teqtl.fdr05.names all.selected.3utr.merged.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.3utr.bed
+
+# Intsersect with SNPs
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.3utr.bed -wa -wb | bgzip > teqtl.fdr05.3utr.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.3utr.bed -wa -wb | bgzip > non.teqtl.fdr05.3utr.results.vcf.gz
+
+# Extract hits
+zcat teqtl.fdr05.3utr.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > teqtl.fdr05.3utr.results.genes.counted
+zcat non.teqtl.fdr05.3utr.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > non.teqtl.fdr05.3utr.results.genes.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > 3utr.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < non.teqtl.fdr05.3utr.results.genes.counted) >> 3utr.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < teqtl.fdr05.3utr.results.genes.counted) >> 3utr.results.fdr05  
+echo SNPs >> 3utr.results.fdr05  
+wc -l < non.teqtl.fdr05.3utr.results.genes.counted >> 3utr.results.fdr05  
+wc -l < teqtl.fdr05.3utr.results.genes.counted >> 3utr.results.fdr05  
+
+paste - - - < 3utr.results.fdr05 > 3utr.results.fdr05.tab 
+```
+
+```{r}
+fdr05.3utr <- read.table('3utr.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(fdr05.3utr) <- fdr05.3utr[,1]
+fdr05.3utr <- fdr05.3utr[,-1]
+names(fdr05.3utr) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(fdr05.3utr),full_width = F)
+# Fisher's exact test
+fisher.test(fdr05.3utr)
+# Mosaic plot of contingency table
+mosaicplot(fdr05.3utr, col = c('lightblue','pink'), main = "3' UTR FDR≤0.05")
+```
+
+# Kozak  
+Going back we can try and apply the same workflow to the Kozak and miRNA target regions.  
+```{bash}
+# Extract hits
+zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.nonteqtl.fdr05.counted
+zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.teqtl.fdr05.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > kozak.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < kozak.results.nonteqtl.fdr05.counted) >> kozak.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < kozak.results.teqtl.fdr05.counted) >> kozak.results.fdr05  
+echo SNPs >> kozak.results.fdr05  
+wc -l < kozak.results.nonteqtl.fdr05.counted >> kozak.results.fdr05  
+wc -l < kozak.results.teqtl.fdr05.counted >> kozak.results.fdr05  
+
+paste - - - < kozak.results.fdr05 > kozak.results.fdr05.tab 
+```
+
+```{r}
+kozak.results.fdr05 <- read.table('kozak.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(kozak.results.fdr05) <- kozak.results.fdr05[,1]
+kozak.results.fdr05 <- kozak.results.fdr05[,-1]
+names(kozak.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
+```
+
+# miRNA
+```{bash}
+# Extract hits
+zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
+zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > miRNA.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < miRNA.results.nonteqtl.fdr05.counted) >> miRNA.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < miRNA.results.teqtl.fdr05.counted) >> miRNA.results.fdr05  
+echo SNPs >> miRNA.results.fdr05  
+wc -l < miRNA.results.nonteqtl.fdr05.counted >> miRNA.results.fdr05  
+wc -l < miRNA.results.teqtl.fdr05.counted >> miRNA.results.fdr05  
+
+paste - - - < miRNA.results.fdr05 > miRNA.results.fdr05.tab 
+```
+
+```{r}
+miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
+miRNA.results.fdr05 <- miRNA.results.fdr05[,-1]
+names(miRNA.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(miRNA.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(miRNA.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targets FDR≤0.05')
+```
+
+Going forward, then, what is the best way to analyze the multiple hits?

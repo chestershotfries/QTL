@@ -488,6 +488,7 @@ miRNA$score <- 0
 miRNAbed <- miRNA[,c(1,2,3,7,8,6)]
 write.table(miRNAbed, 'miRNA.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
 ```
+
 ```{bash, eval=F, echo=T}
 # Sort bed file
 sort -k1,1 -k2,2n miRNA.bed > miRNA.sorted.bed
