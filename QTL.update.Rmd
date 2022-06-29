@@ -540,8 +540,8 @@ mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Regio
 # miRNA
 ```{bash}
 # Extract hits
-zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
-zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
+zcat miRNA.non.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
+zcat miRNA.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
 
 # Create contingency table for teQTL and non-teQTL genes  
 echo No_SNPs > miRNA.results.fdr05  
