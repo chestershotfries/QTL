@@ -1,0 +1,6 @@
+#!/bin/bash
+
+awk '{print (NR>0 ? "chr" : "") $0}' $1 > temp
+NAME=`basename $1 | awk '{sub(/bed/,"fa");print}'`
+twoBitToFa http://hgdownload.cse.ucsc.edu/gbdb/hg19/hg19.2bit -bed=temp $NAME
+rm temp
