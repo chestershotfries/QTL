@@ -507,7 +507,7 @@ mosaicplot(fdr05.3utr, col = c('lightblue','pink'), main = "3' UTR FDR≤0.05")
 
 # Kozak  
 Going back we can try and apply the same workflow to the Kozak and miRNA target regions.  
-```{bash}
+```{bash, eval=F, echo=T}
 # Extract hits
 zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.nonteqtl.fdr05.counted
 zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.teqtl.fdr05.counted
@@ -537,8 +537,12 @@ fisher.test(kozak.results.fdr05)
 mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
 ```
 
+```{bash, eval=F, echo=T}
+
+```
+
 # miRNA
-```{bash}
+```{bash, eval=F, echo=T}
 # Extract hits
 zcat miRNA.non.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
 zcat miRNA.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
@@ -569,3 +573,4 @@ mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targe
 ```
 
 Going forward, then, what is the best way to analyze the multiple hits?
+
