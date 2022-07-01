@@ -537,10 +537,6 @@ fisher.test(kozak.results.fdr05)
 mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
 ```
 
-```{bash, eval=F, echo=T}
-
-```
-
 # miRNA
 ```{bash, eval=F, echo=T}
 # Extract hits
