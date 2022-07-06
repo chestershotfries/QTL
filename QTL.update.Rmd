@@ -505,6 +505,37 @@ fisher.test(fdr05.3utr)
 mosaicplot(fdr05.3utr, col = c('lightblue','pink'), main = "3' UTR FDR≤0.05")
 ```
 
+# miRNA
+```{bash, eval=F, echo=T}
+# Extract hits
+zcat miRNA.non.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
+zcat miRNA.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs > miRNA.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < miRNA.results.nonteqtl.fdr05.counted) >> miRNA.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l < miRNA.results.teqtl.fdr05.counted) >> miRNA.results.fdr05  
+echo SNPs >> miRNA.results.fdr05  
+wc -l < miRNA.results.nonteqtl.fdr05.counted >> miRNA.results.fdr05  
+wc -l < miRNA.results.teqtl.fdr05.counted >> miRNA.results.fdr05  
+
+paste - - - < miRNA.results.fdr05 > miRNA.results.fdr05.tab 
+```
+
+```{r}
+miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
+miRNA.results.fdr05 <- miRNA.results.fdr05[,-1]
+names(miRNA.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(miRNA.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(miRNA.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targets FDR≤0.05')
+```
+
 # Kozak  
 Going back we can try and apply the same workflow to the Kozak and miRNA target regions.  
 ```{bash, eval=F, echo=T}
@@ -537,36 +568,104 @@ fisher.test(kozak.results.fdr05)
 mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
 ```
 
-# miRNA
-```{bash, eval=F, echo=T}
-# Extract hits
-zcat miRNA.non.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.nonteqtl.fdr05.counted
-zcat miRNA.teqtl.fdr05.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > miRNA.results.teqtl.fdr05.counted
 
-# Create contingency table for teQTL and non-teQTL genes  
-echo No_SNPs > miRNA.results.fdr05  
-expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l < miRNA.results.nonteqtl.fdr05.counted) >> miRNA.results.fdr05 
-expr $(wc -l < teqtl.fdr05.names) - $(wc -l < miRNA.results.teqtl.fdr05.counted) >> miRNA.results.fdr05  
-echo SNPs >> miRNA.results.fdr05  
-wc -l < miRNA.results.nonteqtl.fdr05.counted >> miRNA.results.fdr05  
-wc -l < miRNA.results.teqtl.fdr05.counted >> miRNA.results.fdr05  
-
-paste - - - < miRNA.results.fdr05 > miRNA.results.fdr05.tab 
-```
-
-```{r}
-miRNA.results.fdr05 <- read.table('miRNA.results.fdr05.tab')
-# Name rows and columns of contingency table
-rownames(miRNA.results.fdr05) <- miRNA.results.fdr05[,1]
-miRNA.results.fdr05 <- miRNA.results.fdr05[,-1]
-names(miRNA.results.fdr05) <- c('Non-teQTL', 'teQTL')
-# Contingency table
-kable_classic(kbl(miRNA.results.fdr05),full_width = F)
-# Fisher's exact test
-fisher.test(miRNA.results.fdr05)
-# Mosaic plot of contingency table
-mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targets FDR≤0.05')
-```
 
 Going forward, then, what is the best way to analyze the multiple hits?
 
+# Non-Kozak region
+Take 200bp upstream and downstream of the Kozak region and compare the number of hits  
+
+```{r 'Generate bed file of regions upstream and downstream of Kozak for teQTL genes FDR <0.05'}
+teqtl05kozakbed = read.table('teqtl.fdr05.kozak.bed')
+colnames(teqtl05kozakbed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+# Take 200bp upstream
+teqtl05upbed <- teqtl05kozakbed
+teqtl05downbed <- teqtl05kozakbed
+teqtl05upbed$chromStart <- ifelse(teqtl05upbed$strand == '+', teqtl05upbed$chromStart - 200, teqtl05upbed$chromStart + 18)
+teqtl05upbed$chromEnd <- ifelse(teqtl05upbed$strand == '+', teqtl05upbed$chromEnd - 18, teqtl05upbed$chromEnd + 200)
+# Take 200bp downstream
+teqtl05downbed$chromStart <- ifelse(teqtl05downbed$strand == '+', teqtl05downbed$chromStart + 18, teqtl05downbed$chromStart - 200)
+teqtl05downbed$chromEnd <- ifelse(teqtl05downbed$strand == '+', teqtl05downbed$chromEnd + 200, teqtl05downbed$chromEnd - 18)
+write.table(teqtl05upbed, 'teqtl.fdr05.kozak.upstream.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+write.table(teqtl05downbed, 'teqtl.fdr05.kozak.downstream.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+
+nonteqtl05kozakbed = read.table('non.teqtl.fdr05.kozak.bed')
+colnames(nonteqtl05kozakbed) <- c('chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand')
+# Take 200bp upstream
+nonteqtl05upbed <- nonteqtl05kozakbed
+nonteqtl05downbed <- nonteqtl05kozakbed
+nonteqtl05upbed$chromStart <- ifelse(nonteqtl05upbed$strand == '+', nonteqtl05upbed$chromStart - 200, nonteqtl05upbed$chromStart + 18)
+nonteqtl05upbed$chromEnd <- ifelse(nonteqtl05upbed$strand == '+', nonteqtl05upbed$chromEnd - 18, nonteqtl05upbed$chromEnd + 200)
+# Take 200bp downstream
+nonteqtl05downbed$chromStart <- ifelse(nonteqtl05downbed$strand == '+', nonteqtl05downbed$chromStart + 18, nonteqtl05downbed$chromStart - 200)
+nonteqtl05downbed$chromEnd <- ifelse(nonteqtl05downbed$strand == '+', nonteqtl05downbed$chromEnd + 200, nonteqtl05downbed$chromEnd - 18)
+write.table(nonteqtl05upbed, 'non.teqtl.fdr05.kozak.upstream.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+write.table(nonteqtl05downbed, 'non.teqtl.fdr05.kozak.downstream.bed', quote = FALSE, row.names = FALSE, col.names =  FALSE, sep ='\t')
+```
+
+```{bash, eval=F, echo=T}
+cat teqtl.fdr05.kozak.upstream.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.kozak.upstream.uniq.bed
+cat teqtl.fdr05.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.fdr05.kozak.downstream.uniq.bed
+cat non.teqtl.fdr05.kozak.upstream.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.kozak.upstream.uniq.bed
+cat non.teqtl.fdr05.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.kozak.downstream.uniq.bed
+
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > kozak.upstream.results.teqtl.fdr05.nohead.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > kozak.upstream.results.nonteqtl.fdr05.nohead.vcf.gz
+
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > kozak.downstream.results.teqtl.fdr05.nohead.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > kozak.downstream.results.nonteqtl.fdr05.nohead.vcf.gz
+
+# Extract hits
+zcat kozak.upstream.results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.nonteqtl.fdr05.counted
+zcat kozak.upstream.results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.teqtl.fdr05.counted
+
+zcat kozak.downstream.results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.nonteqtl.fdr05.counted
+zcat kozak.downstream.results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.teqtl.fdr05.counted
+
+# Create contingency table for teQTL and non-teQTL genes  
+echo No_SNPs >  kozak.upstream.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l <  kozak.upstream.results.nonteqtl.fdr05.counted) >>  kozak.upstream.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l <  kozak.upstream.results.teqtl.fdr05.counted) >>  kozak.upstream.results.fdr05  
+echo SNPs >>  kozak.upstream.results.fdr05  
+wc -l <  kozak.upstream.results.nonteqtl.fdr05.counted >>  kozak.upstream.results.fdr05  
+wc -l <  kozak.upstream.results.teqtl.fdr05.counted >>  kozak.upstream.results.fdr05  
+
+paste - - - <  kozak.upstream.results.fdr05 >  kozak.upstream.results.fdr05.tab 
+
+echo No_SNPs >  kozak.downstream.results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(wc -l <  kozak.downstream.results.nonteqtl.fdr05.counted) >>  kozak.downstream.results.fdr05 
+expr $(wc -l < teqtl.fdr05.names) - $(wc -l <  kozak.downstream.results.teqtl.fdr05.counted) >>  kozak.downstream.results.fdr05  
+echo SNPs >>  kozak.downstream.results.fdr05  
+wc -l <  kozak.downstream.results.nonteqtl.fdr05.counted >>  kozak.downstream.results.fdr05  
+wc -l <  kozak.downstream.results.teqtl.fdr05.counted >>  kozak.downstream.results.fdr05  
+
+paste - - - <  kozak.downstream.results.fdr05 >  kozak.downstream.results.fdr05.tab 
+```
+
+```{r Upstream FDR≤0.05}
+kozak.up.results.fdr05 <- read.table('kozak.upstream.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(kozak.up.results.fdr05) <- kozak.up.results.fdr05[,1]
+kozak.up.results.fdr05 <- kozak.up.results.fdr05[,-1]
+names(kozak.up.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.up.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.up.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(kozak.up.results.fdr05, col = c('lightblue','pink'), main = 'Upstream FDR≤0.05')
+```
+
+```{r Downstream FDR≤0.05}
+kozak.down.results.fdr05 <- read.table('kozak.downstream.results.fdr05.tab')
+# Name rows and columns of contingency table
+rownames(kozak.down.results.fdr05) <- kozak.down.results.fdr05[,1]
+kozak.down.results.fdr05 <- kozak.down.results.fdr05[,-1]
+names(kozak.down.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.down.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.down.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(kozak.down.results.fdr05, col = c('lightblue','pink'), main = 'Downstream FDR≤0.05')
+```

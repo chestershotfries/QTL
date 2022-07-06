@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Takes input FDR cutoff value and generates output
+
+echo "Input FDR cutoff. example: 05"
+read FDR
+
+# Set naming convention
+TN=teqtl.fdr$FDR
+NTN=non.teqtl.fdr$FDR
+
+
+# Get teQTL gene ids  
+awk -v a="$FDR" '$5 <= 0"."a' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $TN.table  
+cat $TN.table | awk '{print $1}' > $TN.names  
+# Get non-teQTL gene ids  
+awk '$5 >0.$FDR' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $NTN.fdr05.table  
+cat $NTN.table | awk '{print $1}' > $NTN.names  
+# Extract teQTL genes  
+grep -f $TN.names gencode.v19.start.codons.bed > $TN.selected.bed  
+# Extract non-teQTL gene ids  
+grep -f $NTN.names gencode.v19.start.codons.bed > $NTN.selected.bed 
+# Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' $TN.selected.bed > $TN.selected.start.codons.bed  
+# Remove gene versions  
+awk '{sub(/\..*/,"",$4)} 1' $NTN.selected.bed > $NTN.selected.start.codons.bed  
+
