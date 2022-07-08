@@ -1,0 +1,249 @@
+---
+title: "teQTL Kozak"
+output:
+  html_document: 
+    df_print: kable
+    highlight: kate
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'Kozak.html')) })
+---
+
+```{r, echo=F, results='hide', warning=F, message=F}
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+setwd('~/Documents/QTL')
+```
+
+```{r, FDR≤0.01, fig.show="hold"}
+kozak.results.fdr01 <- read.table('kozak.results.fdr01.tab')
+kozak.up.results.fdr01 <- read.table('kozak.upstream.results.fdr01.tab')
+kozak.down.results.fdr01 <- read.table('kozak.downstream.results.fdr01.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr01) <- kozak.results.fdr01[,1]
+kozak.results.fdr01 <- kozak.results.fdr01[,-1]
+names(kozak.results.fdr01) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr01) <- kozak.up.results.fdr01[,1]
+kozak.up.results.fdr01 <- kozak.up.results.fdr01[,-1]
+names(kozak.up.results.fdr01) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr01) <- kozak.down.results.fdr01[,1]
+kozak.down.results.fdr01 <- kozak.down.results.fdr01[,-1]
+names(kozak.down.results.fdr01) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr01),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr01),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr01),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr01)
+fisher.test(kozak.up.results.fdr01)
+fisher.test(kozak.down.results.fdr01)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr01, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.01')
+mosaicplot(kozak.up.results.fdr01, col = c('lightblue','pink'), main = 'Upstream FDR≤0.01')
+mosaicplot(kozak.down.results.fdr01, col = c('lightblue','pink'), main = 'Downstream FDR≤0.01')
+```
+
+```{r, FDR≤0.05, fig.show="hold"}
+kozak.results.fdr05 <- read.table('kozak.results.fdr05.tab')
+kozak.up.results.fdr05 <- read.table('kozak.upstream.results.fdr05.tab')
+kozak.down.results.fdr05 <- read.table('kozak.downstream.results.fdr05.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr05) <- kozak.results.fdr05[,1]
+kozak.results.fdr05 <- kozak.results.fdr05[,-1]
+names(kozak.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr05) <- kozak.up.results.fdr05[,1]
+kozak.up.results.fdr05 <- kozak.up.results.fdr05[,-1]
+names(kozak.up.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr05) <- kozak.down.results.fdr05[,1]
+kozak.down.results.fdr05 <- kozak.down.results.fdr05[,-1]
+names(kozak.down.results.fdr05) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr05),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr05),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr05),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr05)
+fisher.test(kozak.up.results.fdr05)
+fisher.test(kozak.down.results.fdr05)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr05, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.05')
+mosaicplot(kozak.up.results.fdr05, col = c('lightblue','pink'), main = 'Upstream FDR≤0.05')
+mosaicplot(kozak.down.results.fdr05, col = c('lightblue','pink'), main = 'Downstream FDR≤0.05')
+```
+
+```{r, FDR≤0.10, fig.show="hold"}
+kozak.results.fdr10 <- read.table('kozak.results.fdr10.tab')
+kozak.up.results.fdr10 <- read.table('kozak.upstream.results.fdr10.tab')
+kozak.down.results.fdr10 <- read.table('kozak.downstream.results.fdr10.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr10) <- kozak.results.fdr10[,1]
+kozak.results.fdr10 <- kozak.results.fdr10[,-1]
+names(kozak.results.fdr10) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr10) <- kozak.up.results.fdr10[,1]
+kozak.up.results.fdr10 <- kozak.up.results.fdr10[,-1]
+names(kozak.up.results.fdr10) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr10) <- kozak.down.results.fdr10[,1]
+kozak.down.results.fdr10 <- kozak.down.results.fdr10[,-1]
+names(kozak.down.results.fdr10) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr10),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr10),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr10),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr10)
+fisher.test(kozak.up.results.fdr10)
+fisher.test(kozak.down.results.fdr10)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr10, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.10')
+mosaicplot(kozak.up.results.fdr10, col = c('lightblue','pink'), main = 'Upstream FDR≤0.10')
+mosaicplot(kozak.down.results.fdr10, col = c('lightblue','pink'), main = 'Downstream FDR≤0.10')
+```
+
+```{r, FDR≤0.15, fig.show="hold"}
+kozak.results.fdr15 <- read.table('kozak.results.fdr15.tab')
+kozak.up.results.fdr15 <- read.table('kozak.upstream.results.fdr15.tab')
+kozak.down.results.fdr15 <- read.table('kozak.downstream.results.fdr15.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr15) <- kozak.results.fdr15[,1]
+kozak.results.fdr15 <- kozak.results.fdr15[,-1]
+names(kozak.results.fdr15) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr15) <- kozak.up.results.fdr15[,1]
+kozak.up.results.fdr15 <- kozak.up.results.fdr15[,-1]
+names(kozak.up.results.fdr15) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr15) <- kozak.down.results.fdr15[,1]
+kozak.down.results.fdr15 <- kozak.down.results.fdr15[,-1]
+names(kozak.down.results.fdr15) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr15),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr15),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr15),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr15)
+fisher.test(kozak.up.results.fdr15)
+fisher.test(kozak.down.results.fdr15)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr15, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.15')
+mosaicplot(kozak.up.results.fdr15, col = c('lightblue','pink'), main = 'Upstream FDR≤0.15')
+mosaicplot(kozak.down.results.fdr15, col = c('lightblue','pink'), main = 'Downstream FDR≤0.15')
+```
+
+```{r, FDR≤0.25, fig.show="hold"}
+kozak.results.fdr25 <- read.table('kozak.results.fdr25.tab')
+kozak.up.results.fdr25 <- read.table('kozak.upstream.results.fdr25.tab')
+kozak.down.results.fdr25 <- read.table('kozak.downstream.results.fdr25.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr25) <- kozak.results.fdr25[,1]
+kozak.results.fdr25 <- kozak.results.fdr25[,-1]
+names(kozak.results.fdr25) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr25) <- kozak.up.results.fdr25[,1]
+kozak.up.results.fdr25 <- kozak.up.results.fdr25[,-1]
+names(kozak.up.results.fdr25) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr25) <- kozak.down.results.fdr25[,1]
+kozak.down.results.fdr25 <- kozak.down.results.fdr25[,-1]
+names(kozak.down.results.fdr25) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr25),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr25),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr25),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr25)
+fisher.test(kozak.up.results.fdr25)
+fisher.test(kozak.down.results.fdr25)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr25, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.25')
+mosaicplot(kozak.up.results.fdr25, col = c('lightblue','pink'), main = 'Upstream FDR≤0.25')
+mosaicplot(kozak.down.results.fdr25, col = c('lightblue','pink'), main = 'Downstream FDR≤0.25')
+```
+
+```{r, FDR≤0.375, fig.show="hold"}
+kozak.results.fdr375 <- read.table('kozak.results.fdr375.tab')
+kozak.up.results.fdr375 <- read.table('kozak.upstream.results.fdr375.tab')
+kozak.down.results.fdr375 <- read.table('kozak.downstream.results.fdr375.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr375) <- kozak.results.fdr375[,1]
+kozak.results.fdr375 <- kozak.results.fdr375[,-1]
+names(kozak.results.fdr375) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr375) <- kozak.up.results.fdr375[,1]
+kozak.up.results.fdr375 <- kozak.up.results.fdr375[,-1]
+names(kozak.up.results.fdr375) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr375) <- kozak.down.results.fdr375[,1]
+kozak.down.results.fdr375 <- kozak.down.results.fdr375[,-1]
+names(kozak.down.results.fdr375) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr375),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr375),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr375),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr375)
+fisher.test(kozak.up.results.fdr375)
+fisher.test(kozak.down.results.fdr375)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr375, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.375')
+mosaicplot(kozak.up.results.fdr375, col = c('lightblue','pink'), main = 'Upstream FDR≤0.375')
+mosaicplot(kozak.down.results.fdr375, col = c('lightblue','pink'), main = 'Downstream FDR≤0.375')
+```
+
+```{r, FDR≤0.50, fig.show="hold"}
+kozak.results.fdr50 <- read.table('kozak.results.fdr50.tab')
+kozak.up.results.fdr50 <- read.table('kozak.upstream.results.fdr50.tab')
+kozak.down.results.fdr50 <- read.table('kozak.downstream.results.fdr50.tab')
+# Name rows and columns of contingency table
+# Kozak
+rownames(kozak.results.fdr50) <- kozak.results.fdr50[,1]
+kozak.results.fdr50 <- kozak.results.fdr50[,-1]
+names(kozak.results.fdr50) <- c('Non-teQTL', 'teQTL')
+# Upstream
+rownames(kozak.up.results.fdr50) <- kozak.up.results.fdr50[,1]
+kozak.up.results.fdr50 <- kozak.up.results.fdr50[,-1]
+names(kozak.up.results.fdr50) <- c('Non-teQTL', 'teQTL')
+# Downstream
+rownames(kozak.down.results.fdr50) <- kozak.down.results.fdr50[,1]
+kozak.down.results.fdr50 <- kozak.down.results.fdr50[,-1]
+names(kozak.down.results.fdr50) <- c('Non-teQTL', 'teQTL')
+# Contingency table
+kable_classic(kbl(kozak.results.fdr50),full_width = F)
+kable_classic(kbl(kozak.up.results.fdr50),full_width = F)
+kable_classic(kbl(kozak.down.results.fdr50),full_width = F)
+# Fisher's exact test
+fisher.test(kozak.results.fdr50)
+fisher.test(kozak.up.results.fdr50)
+fisher.test(kozak.down.results.fdr50)
+# Mosaic plot of contingency table
+mosaicplot(kozak.results.fdr50, col = c('lightblue','pink'), main = 'Kozak Region FDR≤0.50')
+mosaicplot(kozak.up.results.fdr50, col = c('lightblue','pink'), main = 'Upstream FDR≤0.50')
+mosaicplot(kozak.down.results.fdr50, col = c('lightblue','pink'), main = 'Downstream FDR≤0.50')
+```
+
+``` {r}
+kozak <- data.frame(c(fisher.test(kozak.results.fdr01)$estimate,fisher.test(kozak.results.fdr05)$estimate,fisher.test(kozak.results.fdr10)$estimate,fisher.test(kozak.results.fdr15)$estimate,fisher.test(kozak.results.fdr25)$estimate,fisher.test(kozak.results.fdr375)$estimate,fisher.test(kozak.results.fdr50)$estimate,fisher.test(kozak.up.results.fdr01)$estimate,fisher.test(kozak.up.results.fdr05)$estimate,fisher.test(kozak.up.results.fdr10)$estimate,fisher.test(kozak.up.results.fdr15)$estimate,fisher.test(kozak.up.results.fdr25)$estimate,fisher.test(kozak.up.results.fdr375)$estimate,fisher.test(kozak.up.results.fdr50)$estimate,fisher.test(kozak.down.results.fdr01)$estimate,fisher.test(kozak.down.results.fdr05)$estimate,fisher.test(kozak.down.results.fdr10)$estimate,fisher.test(kozak.down.results.fdr15)$estimate,fisher.test(kozak.down.results.fdr25)$estimate,fisher.test(kozak.down.results.fdr375)$estimate,fisher.test(kozak.down.results.fdr50)$estimate))
+colnames(kozak) <- "odds.ratio"
+kozak$fdr <- c(0.01, 0.05, 0.10, 0.15, 0.25, 0.375, 0.50, 0.02, 0.06, 0.11, 0.16, 0.26, 0.385, 0.51, 0.00, 0.04, 0.09, 0.14, 0.24, 0.365, 0.49)
+kozak$min <- c(fisher.test(kozak.results.fdr01)$conf.int[1],fisher.test(kozak.results.fdr05)$conf.int[1],fisher.test(kozak.results.fdr10)$conf.int[1],fisher.test(kozak.results.fdr15)$conf.int[1],fisher.test(kozak.results.fdr25)$conf.int[1],fisher.test(kozak.results.fdr375)$conf.int[1],fisher.test(kozak.results.fdr50)$conf.int[1],fisher.test(kozak.up.results.fdr01)$conf.int[1],fisher.test(kozak.up.results.fdr05)$conf.int[1],fisher.test(kozak.up.results.fdr10)$conf.int[1],fisher.test(kozak.up.results.fdr15)$conf.int[1],fisher.test(kozak.up.results.fdr25)$conf.int[1],fisher.test(kozak.up.results.fdr375)$conf.int[1],fisher.test(kozak.up.results.fdr50)$conf.int[1],fisher.test(kozak.down.results.fdr01)$conf.int[1],fisher.test(kozak.down.results.fdr05)$conf.int[1],fisher.test(kozak.down.results.fdr10)$conf.int[1],fisher.test(kozak.down.results.fdr15)$conf.int[1],fisher.test(kozak.down.results.fdr25)$conf.int[1],fisher.test(kozak.down.results.fdr375)$conf.int[1],fisher.test(kozak.down.results.fdr50)$conf.int[1])
+kozak$max <- c(fisher.test(kozak.results.fdr01)$conf.int[2],fisher.test(kozak.results.fdr05)$conf.int[2],fisher.test(kozak.results.fdr10)$conf.int[2],fisher.test(kozak.results.fdr15)$conf.int[2],fisher.test(kozak.results.fdr25)$conf.int[2],fisher.test(kozak.results.fdr375)$conf.int[2],fisher.test(kozak.results.fdr50)$conf.int[2],fisher.test(kozak.up.results.fdr01)$conf.int[2],fisher.test(kozak.up.results.fdr05)$conf.int[2],fisher.test(kozak.up.results.fdr10)$conf.int[2],fisher.test(kozak.up.results.fdr15)$conf.int[2],fisher.test(kozak.up.results.fdr25)$conf.int[2],fisher.test(kozak.up.results.fdr375)$conf.int[2],fisher.test(kozak.up.results.fdr50)$conf.int[2],fisher.test(kozak.down.results.fdr01)$conf.int[2],fisher.test(kozak.down.results.fdr05)$conf.int[2],fisher.test(kozak.down.results.fdr10)$conf.int[2],fisher.test(kozak.down.results.fdr15)$conf.int[2],fisher.test(kozak.down.results.fdr25)$conf.int[2],fisher.test(kozak.down.results.fdr375)$conf.int[2],fisher.test(kozak.down.results.fdr50)$conf.int[2])
+kozak$logor <- log(kozak$odds.ratio)
+kozak$logmin <- log(kozak$min)
+kozak$logmax <- log(kozak$max)
+kozak$region <- c("kozak", "kozak", "kozak", "kozak", "kozak", "kozak", "kozak", "upstream", "upstream", "upstream", "upstream", "upstream", "upstream", "upstream", "downstream", "downstream", "downstream", "downstream", "downstream", "downstream", "downstream")
+
+# Plot
+ggplot(kozak, aes(x=fdr, y=logor, fill=region)) + geom_point(aes(shape=region, fill=region), size=5) + geom_errorbar(aes(x=fdr, ymin=logmin, ymax=logmax), width=0.01, size=0.4) + geom_line(aes(color=region)) + scale_color_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_fill_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_shape_manual(values=c(22,24,21)) + theme_classic() + ggtitle("Log Odds Ratio Kozak and Flanking Regions ") + xlab("FDR") + ylab("Log Odds Ratio") + scale_x_continuous(breaks = c(0.01, 0.05, 0.10, 0.15, 0.25, 0.375, 0.50), labels = c("0.01", "0.05","0.10","0.15","0.25","0.375","0.50")) + theme(legend.position= c(0.95,0.95), legend.justification = c("right","top"), legend.title = element_blank())
+
+```
