@@ -78,16 +78,16 @@ cat teqtl.fdr05.kozak.bed | uniq > teqtl.fdr05.kozak.uniq.bed
 cat non.teqtl.fdr05.kozak.bed | uniq > non.teqtl.fdr05.kozak.uniq.bed  
 
 # Intersect SNPs with Kozak regions  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr05.nohead.vcf.gz  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > teqtl.fdr05.kozak.results.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > nonteqtl.fdr05.kozak.results.vcf.gz  
 
 # Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
 echo No_SNPs > results.fdr05  
-expr $(wc -l < non.teqtl.fdr05.names) - $(zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
-expr $(wc -l < teqtl.fdr05.names) - $(zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(zcat nonteqtl.fdr05.kozak.results.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < teqtl.fdr05.names) - $(zcat teqtl.fdr05.kozak.results.vcf.gz | wc -l) >> results.fdr05  
 echo SNPs >> results.fdr05  
-zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
-zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+zcat nonteqtl.fdr05.kozak.results.vcf.gz | wc -l >> results.fdr05  
+zcat teqtl.fdr05.kozak.results.vcf.gz | wc -l >> results.fdr05  
 
 paste - - - < results.fdr05 > results.fdr05.tab  
 ```
@@ -111,7 +111,7 @@ An issue arises from anchoring at the gene.
 Because of the short length of the Kozak region, there were not many duplicate hits when intersecting with SNPs.  
 However, you can see there are still some duplicates.
 ```{bash}
-zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
+zcat results.teqtl.fdr05.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c | head
 ```
 
 There are some genes with multiple hits in the Kozak region. This was actually an issue with the miRNA targets as well but I actually just didn't notice it. This becomes much more apparent later on when the target region is very large such as in exons and introns where there are many hits per gene. 
@@ -540,8 +540,8 @@ mosaicplot(miRNA.results.fdr05, col = c('lightblue','pink'), main = 'miRNA Targe
 Going back we can try and apply the same workflow to the Kozak and miRNA target regions.  
 ```{bash, eval=F, echo=T}
 # Extract hits
-zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.nonteqtl.fdr05.counted
-zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.teqtl.fdr05.counted
+zcat results.nonteqtl.fdr05.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.nonteqtl.fdr05.counted
+zcat results.teqtl.fdr05.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.results.teqtl.fdr05.counted
 
 # Create contingency table for teQTL and non-teQTL genes  
 echo No_SNPs > kozak.results.fdr05  
@@ -609,18 +609,18 @@ cat teqtl.fdr05.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > teqtl.f
 cat non.teqtl.fdr05.kozak.upstream.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.kozak.upstream.uniq.bed
 cat non.teqtl.fdr05.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > non.teqtl.fdr05.kozak.downstream.uniq.bed
 
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > kozak.upstream.results.teqtl.fdr05.nohead.vcf.gz
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > kozak.upstream.results.nonteqtl.fdr05.nohead.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > teqtl.fdr05.kozak.upstream.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.upstream.uniq.bed -wa -wb | bgzip > non.teqtl.fdr05.kozak.upstream.results.vcf.gz
 
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > kozak.downstream.results.teqtl.fdr05.nohead.vcf.gz
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > kozak.downstream.results.nonteqtl.fdr05.nohead.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > teqtl.fdr05.kozak.upstream.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.downstream.uniq.bed -wa -wb | bgzip > non.teqtl.fdr05.kozak.downstream.results.vcf.gz
 
 # Extract hits
-zcat kozak.upstream.results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.nonteqtl.fdr05.counted
-zcat kozak.upstream.results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.teqtl.fdr05.counted
+zcat non.teqtl.fdr05.kozak.upstream.results.vcf.gzz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.non.teqtl.fdr05.counted
+zcat teqtl.fdr05.kozak.upstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.upstream.results.teqtl.fdr05.counted
 
-zcat kozak.downstream.results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.nonteqtl.fdr05.counted
-zcat kozak.downstream.results.teqtl.fdr05.nohead.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.teqtl.fdr05.counted
+zcat non.teqtl.fdr05.kozak.downstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.non.teqtl.fdr05.counted
+zcat teqtl.fdr05.kozak.upstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > kozak.downstream.results.teqtl.fdr05.counted
 
 # Create contingency table for teQTL and non-teQTL genes  
 echo No_SNPs >  kozak.upstream.results.fdr05  

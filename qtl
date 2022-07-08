@@ -1,20 +1,18 @@
 #!/bin/bash
 
 # Takes input FDR cutoff value and generates output
-
-echo "Input FDR cutoff. example: 05"
-read FDR
+export FDR=$1
 
 # Set naming convention
-TN=teqtl.fdr$FDR
-NTN=non.teqtl.fdr$FDR
-
+export TN=teqtl.fdr$FDR
+export NTN=non.teqtl.fdr$FDR
+export FDRd=0.$FDR
 
 # Get teQTL gene ids  
-awk -v a="$FDR" '$5 <= 0"."a' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $TN.table  
+awk -v a="$FDRd" '$5 <= a' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $TN.table  
 cat $TN.table | awk '{print $1}' > $TN.names  
 # Get non-teQTL gene ids  
-awk '$5 >0.$FDR' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $NTN.fdr05.table  
+awk -v a="$FDRd" '$5 > a' cis.teQTL.mapping.permutation.pass.results.table | awk 'NR>1' > $NTN.table  
 cat $NTN.table | awk '{print $1}' > $NTN.names  
 # Extract teQTL genes  
 grep -f $TN.names gencode.v19.start.codons.bed > $TN.selected.bed  
@@ -24,4 +22,59 @@ grep -f $NTN.names gencode.v19.start.codons.bed > $NTN.selected.bed
 awk '{sub(/\..*/,"",$4)} 1' $TN.selected.bed > $TN.selected.start.codons.bed  
 # Remove gene versions  
 awk '{sub(/\..*/,"",$4)} 1' $NTN.selected.bed > $NTN.selected.start.codons.bed  
+
+Rscript ~/Documents/QTL/Scripts/kozak.r                 #Kozak R script
+
+# Clean up duplicates
+cat $TN.kozak.bed | sort | uniq | sort -k1,1 -k2,2n  > $TN.kozak.uniq.bed
+cat $NTN.kozak.bed | sort | uniq | sort -k1,1 -k2,2n > $NTN.kozak.uniq.bed
+cat $TN.kozak.upstream.bed | sort | uniq | sort -k1,1 -k2,2n > $TN.kozak.upstream.uniq.bed
+cat $TN.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > $TN.kozak.downstream.uniq.bed
+cat $NTN.kozak.upstream.bed | sort | uniq | sort -k1,1 -k2,2n > $NTN.kozak.upstream.uniq.bed
+cat $NTN.kozak.downstream.bed | sort | uniq | sort -k1,1 -k2,2n > $NTN.kozak.downstream.uniq.bed
+
+# Intersect SNPs with Kozak and flanking regions
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $TN.kozak.uniq.bed -wa -wb | bgzip > $TN.kozak.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $NTN.kozak.uniq.bed -wa -wb | bgzip > $NTN.kozak.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $TN.kozak.upstream.uniq.bed -wa -wb | bgzip > $TN.kozak.upstream.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $NTN.kozak.upstream.uniq.bed -wa -wb | bgzip > $NTN.kozak.upstream.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $TN.kozak.downstream.uniq.bed -wa -wb | bgzip > $TN.kozak.downstream.results.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b $NTN.kozak.downstream.uniq.bed -wa -wb | bgzip > $NTN.kozak.downstream.results.vcf.gz
+
+# Extract hits
+zcat $NTN.kozak.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $NTN.kozak.results.counted
+zcat $TN.kozak.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $TN.kozak.results.counted
+zcat $NTN.kozak.upstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $NTN.kozak.upstream.results.counted
+zcat $TN.kozak.upstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $TN.kozak.upstream.results.counted
+zcat $NTN.kozak.downstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $NTN.kozak.downstream.results.counted
+zcat $TN.kozak.downstream.results.vcf.gz | awk '{print $(NF-2)}' | sort | uniq -c > $TN.kozak.downstream.results.counted
+
+# Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
+echo No_SNPs > kozak.results.fdr$FDR  
+expr $(wc -l < $NTN.names) - $(wc -l < $NTN.kozak.results.counted) >> kozak.results.fdr$FDR 
+expr $(wc -l < teqtl.fdr$FDR.names) - $(wc -l < $TN.kozak.results.counted) >> kozak.results.fdr$FDR  
+echo SNPs >> kozak.results.fdr$FDR  
+wc -l < $NTN.kozak.results.counted >> kozak.results.fdr$FDR  
+wc -l < $TN.kozak.results.counted >> kozak.results.fdr$FDR  
+
+paste - - - < kozak.results.fdr$FDR > kozak.results.fdr$FDR.tab 
+
+echo No_SNPs > kozak.upstream.results.fdr$FDR                                                                 
+expr $(wc -l < $NTN.names) - $(wc -l < $NTN.kozak.upstream.results.counted) >> kozak.upstream.results.fdr$FDR 
+expr $(wc -l < teqtl.fdr$FDR.names) - $(wc -l < $TN.kozak.upstream.results.counted) >> kozak.upstream.results.fdr$FDR
+echo SNPs >> kozak.upstream.results.fdr$FDR                          
+wc -l < $NTN.kozak.upstream.results.counted >> kozak.upstream.results.fdr$FDR     
+wc -l < $TN.kozak.upstream.results.counted >> kozak.upstream.results.fdr$FDR      
+ 
+paste - - - < kozak.upstream.results.fdr$FDR > kozak.upstream.results.fdr$FDR.tab
+
+echo No_SNPs > kozak.downstream.results.fdr$FDR                                                                 
+expr $(wc -l < $NTN.names) - $(wc -l < $NTN.kozak.downstream.results.counted) >> kozak.downstream.results.fdr$FDR 
+expr $(wc -l < teqtl.fdr$FDR.names) - $(wc -l < $TN.kozak.downstream.results.counted) >> kozak.downstream.results.fdr$FDR
+echo SNPs >> kozak.downstream.results.fdr$FDR                          
+wc -l < $NTN.kozak.downstream.results.counted >> kozak.downstream.results.fdr$FDR     
+wc -l < $TN.kozak.downstream.results.counted >> kozak.downstream.results.fdr$FDR      
+ 
+paste - - - < kozak.downstream.results.fdr$FDR > kozak.downstream.results.fdr$FDR.tab
+
 

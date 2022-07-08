@@ -76,16 +76,16 @@ cat teqtl.fdr10.kozak.bed | uniq > teqtl.fdr10.kozak.uniq.bed
 cat non.teqtl.fdr10.kozak.bed | uniq > non.teqtl.fdr10.kozak.uniq.bed  
 
 # Intersect SNPs with Kozak regions  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr10.nohead.vcf.gz  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr10.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr10.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr10.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr10.vcf.gz  
 
 # Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
 echo No_SNPs > results.fdr10  
-expr $(wc -l < non.teqtl.fdr10.names) - $(zcat results.nonteqtl.fdr10.nohead.vcf.gz | wc -l) >> results.fdr10  
-expr $(wc -l < teqtl.fdr10.names) - $(zcat results.teqtl.fdr10.nohead.vcf.gz | wc -l) >> results.fdr10  
+expr $(wc -l < non.teqtl.fdr10.names) - $(zcat results.nonteqtl.fdr10.vcf.gz | wc -l) >> results.fdr10  
+expr $(wc -l < teqtl.fdr10.names) - $(zcat results.teqtl.fdr10.vcf.gz | wc -l) >> results.fdr10  
 echo SNPs >> results.fdr10  
-zcat results.nonteqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
-zcat results.teqtl.fdr10.nohead.vcf.gz | wc -l >> results.fdr10  
+zcat results.nonteqtl.fdr10.vcf.gz | wc -l >> results.fdr10  
+zcat results.teqtl.fdr10.vcf.gz | wc -l >> results.fdr10  
 
 paste - - - < results.fdr10 > results.fdr10.tab  
 ```
@@ -109,8 +109,8 @@ dev.off()
 ### Find the position of each SNP relative to the start codon
 ```{bash, eval=F, echo=T}
 # Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
-zcat results.teqtl.fdr10.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr10.table  
-zcat results.nonteqtl.fdr10.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr10.table  
+zcat results.teqtl.fdr10.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr10.table  
+zcat results.nonteqtl.fdr10.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr10.table  
 ```
 ```{r 'Find positions of SNPs and plot their histogram FDR <0.1'}
 # FDR <0.10
@@ -200,16 +200,16 @@ cat teqtl.fdr05.kozak.bed | uniq > teqtl.fdr05.kozak.uniq.bed
 cat non.teqtl.fdr05.kozak.bed | uniq > non.teqtl.fdr05.kozak.uniq.bed  
 
 # Intersect SNPs with Kozak regions  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr05.nohead.vcf.gz  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr05.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr05.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr05.vcf.gz  
 
 # Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
 echo No_SNPs > results.fdr05  
-expr $(wc -l < non.teqtl.fdr05.names) - $(zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
-expr $(wc -l < teqtl.fdr05.names) - $(zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < non.teqtl.fdr05.names) - $(zcat results.nonteqtl.fdr05.vcf.gz | wc -l) >> results.fdr05  
+expr $(wc -l < teqtl.fdr05.names) - $(zcat results.teqtl.fdr05.vcf.gz | wc -l) >> results.fdr05  
 echo SNPs >> results.fdr05  
-zcat results.nonteqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
-zcat results.teqtl.fdr05.nohead.vcf.gz | wc -l >> results.fdr05  
+zcat results.nonteqtl.fdr05.vcf.gz | wc -l >> results.fdr05  
+zcat results.teqtl.fdr05.vcf.gz | wc -l >> results.fdr05  
 
 paste - - - < results.fdr05 > results.fdr05.tab  
 ```
@@ -233,8 +233,8 @@ dev.off()
 ### Find the position of each SNP relative to the start codon
 ```{bash, eval=F, echo=T}
 # Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
-zcat results.teqtl.fdr05.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr05.table  
-zcat results.nonteqtl.fdr05.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr05.table 
+zcat results.teqtl.fdr05.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr05.table  
+zcat results.nonteqtl.fdr05.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr05.table 
 ```
 
 ```{r 'Find positions of SNPs and plot their histogram FDR <0.05'}
@@ -321,16 +321,16 @@ cat teqtl.fdr01.kozak.bed | uniq > teqtl.fdr01.kozak.uniq.bed
 cat non.teqtl.fdr01.kozak.bed | uniq > non.teqtl.fdr01.kozak.uniq.bed  
 
 # Intersect SNPs with Kozak regions  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr01.nohead.vcf.gz  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr01.nohead.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.teqtl.fdr01.vcf.gz  
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b non.teqtl.fdr01.kozak.uniq.bed -wa -wb | bgzip > results.nonteqtl.fdr01.vcf.gz  
 
 # Create contingency table of genes and SNPs for teQTL and non-teQTL genes  
 echo No_SNPs > results.fdr01  
-expr $(wc -l < non.teqtl.fdr01.names) - $(zcat results.nonteqtl.fdr01.nohead.vcf.gz | wc -l) >> results.fdr01  
-expr $(wc -l < teqtl.fdr01.names) - $(zcat results.teqtl.fdr01.nohead.vcf.gz | wc -l) >> results.fdr01  
+expr $(wc -l < non.teqtl.fdr01.names) - $(zcat results.nonteqtl.fdr01.vcf.gz | wc -l) >> results.fdr01  
+expr $(wc -l < teqtl.fdr01.names) - $(zcat results.teqtl.fdr01.vcf.gz | wc -l) >> results.fdr01  
 echo SNPs >> results.fdr01  
-zcat results.nonteqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
-zcat results.teqtl.fdr01.nohead.vcf.gz | wc -l >> results.fdr01  
+zcat results.nonteqtl.fdr01.vcf.gz | wc -l >> results.fdr01  
+zcat results.teqtl.fdr01.vcf.gz | wc -l >> results.fdr01  
 
 paste - - - < results.fdr01 > results.fdr01.tab  
 ```
@@ -353,8 +353,8 @@ dev.off()
 ### Find the position of each SNP relative to the start codon
 ```{bash}
 # Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
-zcat results.teqtl.fdr01.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr01.table  
-zcat results.nonteqtl.fdr01.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr01.table  
+zcat results.teqtl.fdr01.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.teqtl.fdr01.table  
+zcat results.nonteqtl.fdr01.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.nonteqtl.fdr01.table  
 ```
 
 ```{r 'Find positions of SNPs and plot their histogram FDR <0.01'}
@@ -409,9 +409,9 @@ write.table(allbed, 'all.selected.kozak.bed', quote = FALSE, row.names = FALSE, 
 # Clean up duplicates
 cat all.selected.kozak.bed | uniq > all.selected.kozak.uniq.bed
 # Intersect SNPs with Kozak regions  
-bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b all.selected.kozak.uniq.bed -wa -wb | bgzip > results.all.selected.nohead.vcf.gz
+bedtools intersect -a psychENCODE.mergedGenotype.RRP.190sample.commonSet.vcf.gz -b all.selected.kozak.uniq.bed -wa -wb | bgzip > results.all.selected.vcf.gz
 # Get chromosome, SNP location, Kozak position, gene id, strand direction from intersection results  
-zcat results.all.selected.nohead.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.all.selected.table  
+zcat results.all.selected.vcf.gz | awk '{print $1, $2, $(NF-4), $(NF-3), $(NF-2), $NF}' > results.all.selected.table  
 # Get gene ids for Kozak mutated genes  
 awk '{print $5}' results.all.selected.table > all.selected.mutated.kozak.names
 # Select genes with mutated Kozak
