@@ -241,9 +241,14 @@ kozak$max <- c(fisher.test(kozak.results.fdr01)$conf.int[2],fisher.test(kozak.re
 kozak$logor <- log(kozak$odds.ratio)
 kozak$logmin <- log(kozak$min)
 kozak$logmax <- log(kozak$max)
+kozak$pv <- c(fisher.test(kozak.results.fdr01)$p.value,fisher.test(kozak.results.fdr05)$p.value,fisher.test(kozak.results.fdr10)$p.value,fisher.test(kozak.results.fdr15)$p.value,fisher.test(kozak.results.fdr25)$p.value,fisher.test(kozak.results.fdr375)$p.value,fisher.test(kozak.results.fdr50)$p.value,fisher.test(kozak.up.results.fdr01)$p.value,fisher.test(kozak.up.results.fdr05)$p.value,fisher.test(kozak.up.results.fdr10)$p.value,fisher.test(kozak.up.results.fdr15)$p.value,fisher.test(kozak.up.results.fdr25)$p.value,fisher.test(kozak.up.results.fdr375)$p.value,fisher.test(kozak.up.results.fdr50)$p.value,fisher.test(kozak.down.results.fdr01)$p.value,fisher.test(kozak.down.results.fdr05)$p.value,fisher.test(kozak.down.results.fdr10)$p.value,fisher.test(kozak.down.results.fdr15)$p.value,fisher.test(kozak.down.results.fdr25)$p.value,fisher.test(kozak.down.results.fdr375)$p.value,fisher.test(kozak.down.results.fdr50)$p.value)
+kozak$nlogpv <- -log10(kozak$pv)
 kozak$region <- c("kozak", "kozak", "kozak", "kozak", "kozak", "kozak", "kozak", "upstream", "upstream", "upstream", "upstream", "upstream", "upstream", "upstream", "downstream", "downstream", "downstream", "downstream", "downstream", "downstream", "downstream")
+
 
 # Plot
 ggplot(kozak, aes(x=fdr, y=logor, fill=region)) + geom_point(aes(shape=region, fill=region), size=5) + geom_errorbar(aes(x=fdr, ymin=logmin, ymax=logmax), width=0.01, size=0.4) + geom_line(aes(color=region)) + scale_color_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_fill_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_shape_manual(values=c(22,24,21)) + theme_classic() + ggtitle("Log Odds Ratio Kozak and Flanking Regions ") + xlab("FDR") + ylab("Log Odds Ratio") + scale_x_continuous(breaks = c(0.01, 0.05, 0.10, 0.15, 0.25, 0.375, 0.50), labels = c("0.01", "0.05","0.10","0.15","0.25","0.375","0.50")) + theme(legend.position= c(0.95,0.95), legend.justification = c("right","top"), legend.title = element_blank())
+
+ggplot(kozak, aes(x=fdr, y=nlogpv, fill=region)) + geom_point(aes(shape=region, fill=region), size=5) + geom_line(aes(color=region)) + scale_color_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_fill_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_shape_manual(values=c(22,24,21)) + theme_classic() + ggtitle("-Log10 P-Value Kozak and Flanking Regions ") + xlab("FDR") + ylab("-Log10 P-Value") + scale_x_continuous(breaks = c(0.01, 0.05, 0.10, 0.15, 0.25, 0.375, 0.50), labels = c("0.01", "0.05","0.10","0.15","0.25","0.375","0.50")) + theme(legend.position= c(0.95,0.95), legend.justification = c("right","top"), legend.title = element_blank())
 
 ```
