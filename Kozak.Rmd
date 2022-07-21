@@ -12,6 +12,7 @@ library(kableExtra)
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
+library(ggseqlogo)
 setwd('~/Documents/QTL')
 ```
 
@@ -252,3 +253,4 @@ ggplot(kozak, aes(x=fdr, y=logor, fill=region)) + geom_point(aes(shape=region, f
 ggplot(kozak, aes(x=fdr, y=nlogpv, fill=region)) + geom_point(aes(shape=region, fill=region), size=5) + geom_line(aes(color=region)) + scale_color_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_fill_manual(values=c("#aaf6d7","#d7aaf6","#f6d7aa")) + scale_shape_manual(values=c(22,24,21)) + theme_classic() + ggtitle("-Log10 P-Value Kozak and Flanking Regions ") + xlab("FDR") + ylab("-Log10 P-Value") + scale_x_continuous(breaks = c(0.01, 0.05, 0.10, 0.15, 0.25, 0.375, 0.50), labels = c("0.01", "0.05","0.10","0.15","0.25","0.375","0.50")) + theme(legend.position= c(0.95,0.95), legend.justification = c("right","top"), legend.title = element_blank())
 
 ```
+

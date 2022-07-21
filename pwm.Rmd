@@ -1,0 +1,43 @@
+---
+title: "teQTL Kozak PWM"
+output:
+  html_document: 
+    df_print: kable
+    highlight: kate
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'PWM.html')) })
+---
+
+```{r, echo=F, results='hide', warning=F, message=F}
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(ggseqlogo)
+setwd('~/Documents/QTL')
+```
+
+```{bash, eval=F, echo=T}
+awk '{printf "%s%s",$0,NR%2?"\t":RS}' all.selected.kozak.uniq.fa | awk 'gsub(/>/,"")' > all.selected.kozak.uniq.split.fa
+
+```
+
+```{r}
+kozakseq <- read.table('all.selected.kozak.uniq.split.fa')
+colnames(kozakseq) <- c("gene","seq")
+kozakseq$seq <- toupper(kozakseq$seq)
+seq <- data.frame(str_split_fixed(kozakseq$seq, "", max(nchar(kozakseq$seq))))
+a <- function(x) {
+  g <- as.data.frame(c(length(grep("A",x)),length(grep("C",x)),length(grep("G",x)),length(grep("T",x))))
+  return(g)
+}
+
+pwm.t <- as.data.frame(apply(seq,2,a), row.names = c("A","C","G","T"), col.names =)
+names(pwm.t) <- NULL
+colnames(pwm.t) <- c("-9","-8","-7","-6","-5","-4","-3","-2","-1","a","t","g,","1","2","3","4","5","6")
+pwm <- pwm.t %>%
+  mutate(across(where(is.numeric), ~ ./sum(.)))
+kozakseq$len <- nchar(kozakseq$seq)
+kozakseq <- kozakseq[kozakseq$len == 18, ]
+kozakseq$a <- gsub("ATG","xxx",kozakseq$seq)
+ggplot() + geom_logo(kozakseq$a) + theme_logo()
+```
